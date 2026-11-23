@@ -332,9 +332,9 @@ function vLockFB(root){
   if(!S.fbUser){
     var gb=h('div',{id:'gbtn',style:'display:flex;justify-content:center;min-height:44px;margin:6px 0 10px'});
     box.append(h('p',{class:'mut'},'Entre com a sua conta Google. Só o casal tem acesso.'),gb,
-      h('button',{class:'b sec full',style:'margin-top:6px',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+      /iPhone|iPad|iPod/.test(navigator.userAgent)?null:h('button',{class:'b sec full',style:'margin-top:6px',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
         fbAuth.signInWithPopup(p).catch(function(err){if(err&&err.code!=='auth/popup-closed-by-user')toast('Não consegui entrar por aqui ('+err.code+'). Use o botão do Google acima.')})}},'Outra forma de entrar'),
-      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'));
+      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'),h('div',{class:'hint',style:'opacity:.6'},'versão 3'));
     setTimeout(desenhaBotaoGoogle,0);
   }
   else{box.append(h('p',null,'A conta ',h('b',null,S.fbUser.email||''),' não tem acesso a este app.'),h('p',{class:'mut'},'Entre com a conta do casal.'),
