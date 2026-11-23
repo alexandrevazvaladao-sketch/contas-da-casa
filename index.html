@@ -154,6 +154,8 @@ details summary::-webkit-details-marker{display:none}
 <script>
 (function(){
 "use strict";
+// Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
+const APP_VERSION = 'v2026.11.23.6';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -333,9 +335,9 @@ function vLockFB(root){
   if(!S.fbUser){
     var gb=h('div',{id:'gbtn',style:'display:flex;justify-content:center;min-height:44px;margin:6px 0 10px'});
     box.append(h('p',{class:'mut'},'Entre com a sua conta Google. Só o casal tem acesso.'),gb,
-      /iPhone|iPad|iPod/.test(navigator.userAgent)?null:h('button',{class:'b sec full',style:'margin-top:6px',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
-        fbAuth.signInWithPopup(p).catch(function(err){if(err&&err.code!=='auth/popup-closed-by-user')toast('Não consegui entrar por aqui ('+err.code+'). Use o botão do Google acima.')})}},'Outra forma de entrar'),
-      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'),h('div',{class:'hint',style:'opacity:.6'},'versão 4'));
+      h('button',{class:'b sec full',style:'margin-top:6px',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+        fbAuth.signInWithPopup(p).catch(function(err){if(err&&err.code!=='auth/popup-closed-by-user')toast('Não consegui entrar por aqui ('+err.code+'). Tente o botão azul do Google acima.')})}},'Entrar pelo Google (outra forma)'),
+      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'),h('div',{class:'hint',style:'opacity:.6'},'versão '+APP_VERSION));
     setTimeout(desenhaBotaoGoogle,0);
   }
   else{box.append(h('p',null,'A conta ',h('b',null,S.fbUser.email||''),' não tem acesso a este app.'),h('p',{class:'mut'},'Entre com a conta do casal.'),
@@ -903,7 +905,7 @@ function desenhaBotaoGoogle(){
     }});
     var w=Math.min(360,Math.max(220,(el.clientWidth||300)));
     google.accounts.id.renderButton(el,{type:'standard',theme:'filled_blue',size:'large',text:'signin_with',shape:'pill',locale:'pt-BR',width:w});
-  }).catch(function(){el.textContent='Não consegui carregar o botão do Google. Use “Outra forma de entrar”.'});
+  }).catch(function(){el.textContent='Não consegui carregar o botão do Google. Use “Entrar pelo Google (outra forma)”.'});
 }
 
 /* ---------- Gemini (Firebase AI Logic) ---------- */
@@ -976,6 +978,7 @@ function vCfg(root){
     }},'Salvar ajustes')));
   if(FBMODE&&S.fbUser)root.append(h('div',{class:'card'},h('h3',null,'Conta'),h('div',{class:'row'},h('div',{class:'grow'},h('div',{class:'t'},S.fbUser.displayName||S.fbUser.email),h('div',{class:'s'},S.fbUser.email)),h('button',{class:'b sec',style:'min-height:38px;padding:8px 12px',onclick:function(){fbAuth.signOut()}},'Sair')),h('div',{class:'hint'},'Quem pode entrar é definido nas regras do Firebase (só os e-mails do casal).')));
   else if(db)root.append(cardMembros());
+  root.append(h('div',{class:'hint',style:'text-align:center'},'Contas da Casa · '+APP_VERSION));
   var bk=h('textarea',{readonly:true,style:'display:none'});var rs=h('textarea',{placeholder:'Cole aqui um backup para restaurar'});
   root.append(h('div',{class:'card'},h('h3',null,'Backup'),
     h('div',{class:'hint',style:'margin-top:0'},'Gera um texto com todos os dados. Guarde num lugar seguro.'),
@@ -1058,8 +1061,47 @@ function initFirebase(){
     fs.doc('contas/acesso').get().then(function(){S.fbOk=true;S.me=u.uid;S.membros=[u.uid];S.gateReady=true;db=fsWrap(fs);startSubs();render()},
       function(e){if(e&&e.code==='permission-denied'){S.fbOk=false}else{S.fbOk=true;S.me=u.uid;S.membros=[u.uid];S.gateReady=true;db=fsWrap(fs);startSubs()}render()});
   });
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(function(reg){try{reg.update()}catch(e){}}).catch(function(){});
+  }
 }
+/* ---------- Atualização automática (igual ao Diário de Obra) ---------- */
+(function(){
+  var INTERVALO_MS=60000,verificando=false,recarregando=false;
+  try{var a=JSON.parse(localStorage.getItem('cc-aviso-atualizacao')||'null');
+    if(a&&Date.now()-(a.quando||0)<120000){localStorage.removeItem('cc-aviso-atualizacao');setTimeout(function(){toast('App atualizado para '+(a.para||APP_VERSION)+' ✓')},800)}}catch(e){}
+  try{if(/[?&]v=/.test(location.search))history.replaceState(null,'',location.pathname+location.hash)}catch(e){}
+  function ocupado(){
+    var el=document.activeElement,tag=el&&(el.tagName||'').toLowerCase();
+    if(tag==='textarea'||tag==='select'||(tag==='input'&&['button','checkbox','radio','submit','range','file'].indexOf((el.type||'').toLowerCase())<0))return true;
+    if($('#modal')&&$('#modal').children.length)return true;   // formulário aberto
+    if(S.entry)return true;                                     // valor sendo digitado no Mercado
+    if(S.lendoNota)return true;
+    return false;
+  }
+  function recarregar(nova){
+    if(recarregando)return;recarregando=true;
+    try{pref('merc',S.merc);persistLocal()}catch(e){}           // garante cópia local antes de recarregar
+    try{localStorage.setItem('cc-aviso-atualizacao',JSON.stringify({de:APP_VERSION,para:nova,quando:Date.now()}))}catch(e){}
+    (function ir(){if(ocupado()){setTimeout(ir,3000);return}
+      window.location.replace(location.pathname+'?v='+encodeURIComponent(nova)+location.hash)})();
+  }
+  function verificar(){
+    if(verificando||recarregando||!navigator.onLine)return;verificando=true;
+    fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(txt){
+      var m=txt&&txt.match(/const APP_VERSION = '([^']+)'/);
+      if(!m||m[1]===APP_VERSION){try{sessionStorage.removeItem('cc-tentou')}catch(e){}return}
+      var t=null;try{t=sessionStorage.getItem('cc-tentou')}catch(e){}
+      if(t===m[1])return;                                       // evita laço se o servidor ainda não propagou
+      try{sessionStorage.setItem('cc-tentou',m[1])}catch(e){}
+      recarregar(m[1]);
+    }).catch(function(){}).then(function(){verificando=false});
+  }
+  if(!FBMODE)return;                                           // só na versão publicada no GitHub
+  setTimeout(verificar,3000);setInterval(verificar,INTERVALO_MS);
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')verificar()});
+  window.addEventListener('focus',verificar);window.addEventListener('online',verificar);window.addEventListener('pageshow',verificar);
+})();
 init();
 })();
 </script>
