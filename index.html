@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.14';
+const APP_VERSION = 'v2026.11.23.15';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -237,8 +237,22 @@ function saveConfig(){var c=Object.assign({},S.config);c.regras=(c.regras||[]).m
 function parcelasDoMes(ym){var out=[];S.parcelas.forEach(function(p){var d=ymDiff(p.mes,ym),n=(+p.atual||1)+d;if(d>=0&&n>=1&&n<=p.total)out.push(Object.assign({},p,{n:n}))});return out}
 function sum(a){return a.reduce(function(s,x){return s+(+x.valor||0)},0)}
 function group(arr,k){var m={};arr.forEach(function(x){var key=x[k]||'—';m[key]=(m[key]||0)+(+x.valor||0)});return Object.keys(m).map(function(key){return [key,m[key]]}).sort(function(a,b){return b[1]-a[1]})}
+/* ---------- previsão automática dos próximos meses ----------
+   Todo mês sem plano próprio repete o último mês planejado (como as colunas da planilha):
+   contas fixas, mercado/iFood/extras, salários e o total dos cartões sem parcelas cadastradas.
+   Nos cartões com parcelas, entram as parcelas reais de cada mês. */
+function planejado(x){return x.orig==='planilha'||x.orig==='previsao'}
+function mesModelo(ym){var ks=Object.keys(S.months).filter(function(k){return k<ym&&monthLanc(k).some(planejado)}).sort();return ks.length?ks[ks.length-1]:null}
+function virtuais(ym){
+  if(monthLanc(ym).some(planejado))return [];
+  var k=mesModelo(ym);if(!k)return [];
+  var comParc={};S.parcelas.forEach(function(p){comParc[p.fonte]=1});
+  return monthLanc(k).filter(function(x){return planejado(x)&&x.tipo!=='investimento'&&!(x.cat==='Fatura cartão'&&comParc[x.fonte])})
+    .map(function(x){return Object.assign({},x,{id:'v'+ym+x.id,virt:true,prev:x.tipo!=='receita',pago:false,venc:''})});
+}
+function materializa(ym){var V=virtuais(ym);if(!V.length)return {};var mapa={},novos=V.map(function(x){var y=Object.assign({},x,{id:uid(),orig:'previsao'});delete y.virt;mapa[x.id]=y.id;return y});setMonth(ym,monthLanc(ym).concat(novos));return mapa}
 function calc(ym){
-  var L=monthLanc(ym);
+  var L=monthLanc(ym).concat(virtuais(ym));
   var imp={};L.forEach(function(x){if(x.orig==='fatura')imp[x.fonte]=1});
   var tot={};L.forEach(function(x){if(x.prev&&x.cat==='Fatura cartão')tot[x.fonte]=1});   // total previsto do cartão já inclui as parcelas
   var proj=parcelasDoMes(ym).filter(function(p){return !imp[p.fonte]&&!tot[p.fonte]}).map(function(p){return {id:'p'+p.id,pid:p.id,desc:p.desc+' ('+p.n+'/'+p.total+')',valor:p.valor,tipo:'despesa',cat:'Parcelas',fonte:p.fonte,pessoa:p.pessoa,proj:true,pago:false}});
@@ -442,6 +456,7 @@ function vInicio(root){
     }
   });
   root.append(cc);
+  root.append(cardPrevisao());
   // entradas
   var rec=c.all.filter(function(x){return x.tipo==='receita'});
   var ce=h('div',{class:'card'},h('h3',null,'Entradas',h('span',{style:'font-weight:700;color:var(--ok)'},brl(c.R))));
@@ -458,10 +473,20 @@ function vInicio(root){
   }
   root.append(cardDelivery());
 }
+function cardPrevisao(){
+  var cp=h('div',{class:'card'},h('h3',null,'Próximos meses'),h('div',{class:'hint',style:'margin:-4px 0 6px'},'Previsto com base na planilha: contas, salários e parcelas. Toque num mês para ver.'));
+  var ac=0;
+  for(var i=1;i<=12;i++){(function(m){var c=calc(m);ac+=c.saldo;var p=m.split('-');
+    cp.append(h('div',{class:'row',style:'cursor:pointer;min-height:46px;padding:6px 0',onclick:function(){S.ym=m;vib();render();scrollTo(0,0)}},
+      h('div',{class:'grow'},h('div',{class:'t'},MESES[+p[1]-1]+' '+p[0]),h('div',{class:'s'},'entra '+brl(c.R)+' · sai '+brl(c.D))),
+      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(c.saldo)},(c.saldo>=0?'sobra ':'falta ')+brl(Math.abs(c.saldo))),h('div',{class:'s',style:'font-size:12px'},'acumulado '+brl(ac)))))})(ymAdd(S.ym,i))}
+  return cp;
+}
 /* Toque numa conta: muda só o valor (e se está paga), sem formulário grande. */
 function editaRapido(x){
   if(x.proj){var p=S.parcelas.filter(function(q){return q.id===x.pid})[0];if(p)openParc(p);return}
   var ym=S.ym,rec=x.tipo==='receita';
+  if(x.virt){var mp=materializa(ym);x=monthLanc(ym).filter(function(y){return y.id===mp[x.id]})[0];if(!x)return}
   var fV=h('input',{type:'text',inputmode:'decimal',value:String(x.valor).replace('.',','),autocomplete:'off'});
   var fN=h('input',{type:'text',value:(x.desc||'').replace(/ \(previsto\)$/,''),autocomplete:'off'});
   var fP=h('input',{type:'checkbox'});fP.checked=!!x.pago;
