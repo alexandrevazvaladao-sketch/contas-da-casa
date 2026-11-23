@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.25';
+const APP_VERSION = 'v2026.11.23.26';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -412,7 +412,11 @@ function lancarAuto(r){
   return true;
 }
 window.lancarAuto=function(r){return lancarAuto(r)};
-function processaAuto(){if(AUTO_PEND){var r=AUTO_PEND;AUTO_PEND=null;if(lancarAuto(r)){S.tab='inicio';render()}}}
+function ajustesUnicos(){ // correções pontuais, cada uma entra uma vez só (id fixo)
+  var A=[{ym:'2026-12',it:{id:'ajuste-centavos-nc-2026-12',desc:'Ajuste de centavos (igual ao app do Nubank)',valor:0.02,tipo:'despesa',cat:'Taxas',fonte:'Nubank Casal',pessoa:'Casal',data:'2026-11-30',pago:false,fixa:false,orig:'fatura'}}];
+  A.forEach(function(a){var L=monthLanc(a.ym);if(!L.length||L.some(function(x){return x.id===a.it.id}))return;if(!L.some(function(x){return x.orig==='fatura'&&x.fonte===a.it.fonte}))return;setMonth(a.ym,L.concat([a.it]))});
+}
+function processaAuto(){ajustesUnicos();if(AUTO_PEND){var r=AUTO_PEND;AUTO_PEND=null;if(lancarAuto(r)){S.tab='inicio';render()}}}
 
 /* ---------- csv ---------- */
 function parseCSV(t){
