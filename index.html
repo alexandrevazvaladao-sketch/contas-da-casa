@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.17';
+const APP_VERSION = 'v2026.11.23.18';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -437,7 +437,7 @@ function vInicio(root){
     else linhas.push({item:x,valor:+x.valor||0});
   });
   // mesma ordem da planilha; o que não estiver nela vem depois, do maior para o menor
-  var ORD=['Energia/Água','Supermercado','Carne','Internet','Ração/Banho Selena','Financiamento','Seguro','#Nubank Casal','#Nubank Isabella','#Inter Alexandre','#Banco do Brasil Isabella','IA','Agnes','Contador','Ifood/Delivery','Gastos extras'];
+  var ORD=['Energia/Água','Supermercado','Carne','Internet','Ração/Banho Selena','Financiamento','Seguro','#Nubank Casal','#Nubank Isabella','#Inter Alexandre','Celular','#Banco do Brasil Isabella','IA','Agnes','Contador','Ifood/Delivery','Gastos extras'];
   function chave(l){var k=l.grupo?'#'+l.grupo:(l.item.cat==='Fatura cartão'?'#'+l.item.fonte:l.item.cat);var i=ORD.indexOf(k);return i<0?99:i}
   linhas.sort(function(a,b){return (chave(a)-chave(b))||(b.valor-a.valor)});
   var cc=h('div',{class:'card'},h('h3',null,'Contas de '+mesNome.toLowerCase(),h('span',{style:'font-weight:700;color:var(--tx)'},brl(c.D))));
