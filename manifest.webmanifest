@@ -1,0 +1,19 @@
+{
+  "name": "Contas da Casa",
+  "short_name": "Contas",
+  "description": "Controle das contas de casa do casal",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#16233d",
+  "theme_color": "#16233d",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Novo lançamento", "url": "./#novo" },
+    { "name": "Mercado", "url": "./#mercado" },
+    { "name": "A pagar", "url": "./#pagar" }
+  ]
+}
