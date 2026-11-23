@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.22';
+const APP_VERSION = 'v2026.11.23.23';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -300,6 +300,10 @@ function calc(ym){
   var tot={};L.forEach(function(x){if(x.prev&&x.cat==='Fatura cartão')tot[x.fonte]=1});   // total previsto do cartão já inclui as parcelas
   var proj=parcelasDoMes(ym).filter(function(p){return !imp[p.fonte]&&!tot[p.fonte]}).map(function(p){return {id:'p'+p.id,pid:p.id,desc:p.desc+' ('+p.n+'/'+p.total+')',valor:p.valor,tipo:'despesa',cat:'Parcelas',fonte:p.fonte,pessoa:p.pessoa,proj:true,pago:false}});
   L=L.filter(function(x){return !(x.prev&&imp[x.fonte])});   // previsto some quando a fatura daquele cartão chega
+  var real={};L.forEach(function(x){if(!x.prev&&x.tipo==='despesa'&&x.orig!=='fatura'&&x.orig!=='planilha')real[x.cat]=(real[x.cat]||0)+(+x.valor||0)});
+  var temPrev={};L.forEach(function(x){if(x.prev)temPrev[x.cat]=1});
+  if(temPrev['Gastos extras'])Object.keys(real).forEach(function(k){if(!temPrev[k]&&k!=='Gastos extras'){real['Gastos extras']=(real['Gastos extras']||0)+real[k];delete real[k]}});
+  L=L.map(function(x){if(!x.prev||x.tipo!=='despesa'||x.cat==='Fatura cartão'||!real[x.cat])return x;var usa=Math.min(real[x.cat],+x.valor||0);real[x.cat]-=usa;return Object.assign({},x,{valor:Math.round((x.valor-usa)*100)/100,usado:usa})}).filter(function(x){return !(x.prev&&x.usado&&x.valor<=0)});
   var all=L.concat(proj);
   // Igual à planilha: investimento não entra nas despesas; "ainda sobra" = saldo + investimentos.
   var rec=all.filter(function(x){return x.tipo==='receita'}),des=all.filter(function(x){return x.tipo==='despesa'}),inv=all.filter(function(x){return x.tipo==='investimento'});
@@ -354,6 +358,46 @@ function parseNotif(text){
   var pix=/pix|transfer/i.test(s),cred=!pix&&/cr[eé]dito|cart[aã]o|compra/i.test(s);
   return {valor:v,tipo:rec?'receita':'despesa',desc:loja,cat:rec?'':(loja?autoCat(loja):''),credito:cred,pix:pix};
 }
+
+/* ---------- lançamento automático (Atalho do iPhone: automação "Transação" da Carteira) ----------
+   O Atalho abre o app com ?add=VALOR&d=LOJA&c=CARTÃO. A compra entra sozinha no mês em que a fatura vai ser paga. */
+var AUTO_PEND=null;
+(function(){try{var q=new URLSearchParams(location.search);if(q.get('t')){var pt=q.get('t').split('|');AUTO_PEND={valor:pt[0]||'',desc:pt[1]||'',cartao:pt[2]||''};history.replaceState(null,'',location.pathname)}else if(q.get('add')||q.get('n')){AUTO_PEND={valor:q.get('add')||'',desc:q.get('d')||'',cartao:q.get('c')||'',texto:q.get('n')||''};history.replaceState(null,'',location.pathname)}}catch(e){}})();
+function fonteDoCartao(c){
+  c=String(c||'').toLowerCase();var F=S.config.fontes||[],map=S.config.cartaoMapa||{};
+  for(var k in map){if(k&&c.indexOf(k.toLowerCase())>=0)return map[k]}
+  function ach(re){return F.filter(function(f){return re.test(f)})[0]}
+  if(/inter/.test(c))return ach(/inter/i)||F[0];
+  if(/brasil|bb\b|ourocard/.test(c))return ach(/brasil/i)||F[0];
+  if(/isabella/.test(c))return ach(/nubank.*isabella/i)||F[0];
+  if(/nu|nubank/.test(c))return ach(/nubank.*casal/i)||ach(/nubank/i)||F[0];
+  return ach(/nubank.*casal/i)||F[0];
+}
+function mesDaFatura(fonte,data){
+  // fatura fecha ~7 dias antes do vencimento. Compra antes do fechamento entra na fatura que fecha no mesmo mês.
+  var V=+((S.config.vencDia||{})['fatura:'+fonte])||0,ym=data.slice(0,7),d=+data.slice(8,10);
+  if(!V)return ymAdd(ym,1);
+  var C=V-7,fechaMes=ym;if(C<1){C+=30;}
+  if(V-7<1){ // fecha no mês anterior ao vencimento
+    if(d>=C)fechaMes=ymAdd(ym,1);return ymAdd(fechaMes,1);
+  }
+  if(d>=C)fechaMes=ymAdd(ym,1);return fechaMes;
+}
+function lancarAuto(r){
+  var v=r.valor;if(typeof v!=='number'){v=String(v||'').replace(/[^\d,.\-]/g,'');if(/,\d{1,2}$/.test(v))v=v.replace(/\./g,'').replace(',','.');v=parseFloat(v)}
+  if(!(v>0)&&r.texto){var p=parseNotif(r.texto);if(p){v=p.valor;r.desc=r.desc||p.desc}}
+  v=Math.round(Math.abs(v||0)*100)/100;if(!v)return false;
+  var desc=String(r.desc||'Compra no cartão').trim().slice(0,60),data=(r.quando&&/^\d{4}-\d{2}-\d{2}/.test(r.quando))?r.quando.slice(0,10):today();
+  var fonte=fonteDoCartao(r.cartao||r.texto),ym=ehCartao(fonte)?mesDaFatura(fonte,data):data.slice(0,7);
+  var id=r.id||('a'+data.replace(/-/g,'')+String(v).replace('.','')+desc.replace(/\W/g,'').slice(0,12).toLowerCase());
+  if(monthLanc(ym).some(function(x){return x.id===id}))return true;
+  var it={id:id,desc:desc,valor:v,tipo:'despesa',cat:autoCat(desc),fonte:fonte,pessoa:'Casal',data:data,pago:false,fixa:false,orig:'auto'};
+  setMonth(ym,monthLanc(ym).concat([it]));
+  toast('Lançado: '+desc+' '+brlRaw(v)+' · '+fonte+' ('+ymLabel(ym)+'). Toque nele para mudar a categoria.');
+  return true;
+}
+window.lancarAuto=function(r){return lancarAuto(r)};
+function processaAuto(){if(AUTO_PEND){var r=AUTO_PEND;AUTO_PEND=null;if(lancarAuto(r)){S.tab='inicio';render()}}}
 
 /* ---------- csv ---------- */
 function parseCSV(t){
@@ -495,7 +539,7 @@ function vInicio(root){
     }else{var x=l.item;
       cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},
         h('div',{class:'ic',style:'background:'+catColor(x.cat)+'33'},icon(x.cat)),
-        h('div',{class:'grow'},h('div',{class:'t'},x.cat==='Fatura cartão'&&x.fonte?x.fonte:(x.desc||x.cat||'').replace(/ \(previsto\)$/,'')),h('div',{class:'s'},x.pago?'✓ pago':(x.prev?'previsto':(x.venc?'vence '+isoToBR(x.venc):'a pagar')))),
+        h('div',{class:'grow'},h('div',{class:'t'},x.cat==='Fatura cartão'&&x.fonte?x.fonte:(x.desc||x.cat||'').replace(/ \(previsto\)$/,'')),h('div',{class:'s'},x.pago?'✓ pago':(x.prev?(x.usado?'resta do previsto · já gastou '+brl(x.usado):'previsto'):(x.orig==='auto'?'📲 lançado automático':(x.venc?'vence '+isoToBR(x.venc):'a pagar'))))),
         h('div',{class:'v',style:x.prev?'opacity:.75':''},brl(x.valor))));
     }
   });
@@ -529,6 +573,7 @@ function cardPrevisao(){
 /* Toque numa conta: muda só o valor (e se está paga), sem formulário grande. */
 function editaRapido(x){
   if(x.proj){var p=S.parcelas.filter(function(q){return q.id===x.pid})[0];if(p)openParc(p);return}
+  if(x.usado)x=Object.assign({},x,{valor:Math.round((x.valor+x.usado)*100)/100,usado:0});
   var ym=S.ym,rec=x.tipo==='receita';
   if(x.virt){var mp=materializa(ym);x=monthLanc(ym).filter(function(y){return y.id===mp[x.id]})[0];if(!x)return}
   var fV=h('input',{type:'text',inputmode:'decimal',value:String(x.valor).replace('.',','),autocomplete:'off'});
@@ -950,7 +995,7 @@ function vFat(root){
   root.append(cd);
   root.append(h('div',{class:'hint'},'Pagamentos de fatura já vêm desmarcados.'));
   root.append(h('div',{class:'acts'},h('button',{class:'b sec',onclick:function(){f.rows=[];render()}},'Cancelar'),h('button',{class:'b',onclick:function(){
-    var L=monthLanc(S.ym).slice();if(f.replace)L=L.filter(function(x){return !(x.orig==='fatura'&&x.fonte===f.fonte)});
+    var L=monthLanc(S.ym).slice();if(f.replace)L=L.filter(function(x){return !(x.orig==='fatura'&&x.fonte===f.fonte)});L=L.filter(function(x){return !(x.orig==='auto'&&x.fonte===f.fonte)});
     var n=0;f.rows.filter(function(r){return r.inc}).forEach(function(r){L.push({id:uid(),desc:r.desc,valor:r.valor,tipo:'despesa',cat:r.cat,fonte:f.fonte,pessoa:f.pessoa,venc:'',pago:false,fixa:false,orig:'fatura',data:r.data});n++});
     setMonth(S.ym,L);f.rows=[];f.text='';toast(n+' compras importadas.');S.tab='inicio';S.sub='';render();
   }},'Importar')));
@@ -1227,16 +1272,17 @@ var subsOff=[];
 function startSubs(){
   subsOff.forEach(function(f){try{f()}catch(e){}});subsOff=[];
   var lim=setTimeout(function(){if(!S.loaded)toast('Demorando para conectar. Os dados podem estar desatualizados.')},10000);
-  function done(){S.loaded=true;clearTimeout(lim);updateHeader()}
+  function done(){S.loaded=true;clearTimeout(lim);updateHeader();processaAuto()}
   subsOff.push(db.doc('casa/config').onSnapshot(function(s){if(s.exists){S.config=mergeCfg(s.data())}softRender()},function(){}));
   subsOff.push(db.doc('mercado/atual').onSnapshot(function(s){if(!s.exists)return;var r=s.data();if((r.upd||0)>(S.merc.upd||0)){S.merc={itens:r.itens||[],limite:r.limite||0,upd:r.upd||0,loja:r.loja,dataNota:r.dataNota};pref('merc',S.merc);softRender()}
     else if((S.merc.upd||0)>(r.upd||0)&&!s.metadata.hasPendingWrites)save('mercado/atual',S.merc)},function(){}));
+  subsOff.push(db.collection('inbox').onSnapshot(function(q){if(!S.loaded)return;q.docs.forEach(function(d){var r=d.data()||{};if(lancarAuto({valor:r.valor,desc:r.desc,cartao:r.cartao,quando:r.quando,id:'i'+d.id}))try{db.doc('inbox/'+d.id).delete()}catch(e){}})},function(){}));
   subsOff.push(db.doc('casa/parcelas').onSnapshot(function(s){S.parcelas=s.exists?(s.data().itens||[]):[];softRender()},function(){}));
   subsOff.push(db.collection('meses').onSnapshot(function(q){var m={};q.docs.forEach(function(d){m[d.id]=d.data()});S.months=m;S.offline=!!q.metadata.fromCache;if(!q.metadata.fromCache)done();softRender()},function(){done()}));
 }
 /* ---------- Firebase ---------- */
 function fsWrap(fs){
-  function map(p){return p==='casa/config'?'contas/config':p==='casa/parcelas'?'contas/parcelas':p==='mercado/atual'?'contas/mercado':p==='meses'?'contasMeses':p.indexOf('meses/')===0?'contasMeses/'+p.slice(6):p}
+  function map(p){return p==='casa/config'?'contas/config':p==='casa/parcelas'?'contas/parcelas':p==='mercado/atual'?'contas/mercado':p==='meses'?'contasMeses':p.indexOf('meses/')===0?'contasMeses/'+p.slice(6):p==='inbox'?'contasInbox':p.indexOf('inbox/')===0?'contasInbox/'+p.slice(6):p}
   return {doc:function(p){return fs.doc(map(p))},collection:function(p){return fs.collection(map(p))}};
 }
 function initFirebase(){
