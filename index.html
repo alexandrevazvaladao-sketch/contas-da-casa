@@ -205,7 +205,7 @@ function guessPessoa(fonte){var f=(fonte||'').toLowerCase();var ps=S.config.pess
 function vib(){try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}}
 
 /* ---------- storage ---------- */
-function mergeCfg(c){c=Object.assign({},DEF,c||{});
+function mergeCfg(c){c=Object.assign({},DEF,c||{});c.regras=(c.regras||[]).map(function(r){return Array.isArray(r)?r:[r.p,r.c]}).filter(function(r){return r[0]&&r[1]});
   c.cats=(c.cats||[]).concat(DEF.cats.filter(function(x){return (c.cats||[]).indexOf(x)<0}));
   var tem={};(c.regras||[]).forEach(function(r){tem[String(r[0]).toLowerCase()]=1});
   c.regras=DEF.regras.filter(function(r){return !tem[r[0]]}).concat(c.regras||[]);
@@ -221,7 +221,8 @@ function save(path,data){
 function monthLanc(ym){return (S.months[ym]&&S.months[ym].lanc)||[]}
 function setMonth(ym,lanc){S.months[ym]={lanc:lanc};save('meses/'+ym,{lanc:lanc})}
 function saveParcelas(){save('casa/parcelas',{itens:S.parcelas})}
-function saveConfig(){save('casa/config',S.config)}
+// O Firestore não aceita lista dentro de lista: as regras vão como {p: palavra, c: categoria}.
+function saveConfig(){var c=Object.assign({},S.config);c.regras=(c.regras||[]).map(function(r){return Array.isArray(r)?{p:r[0],c:r[1]}:r});save('casa/config',c)}
 
 /* ---------- cálculos ---------- */
 function parcelasDoMes(ym){var out=[];S.parcelas.forEach(function(p){var d=ymDiff(p.mes,ym),n=(+p.atual||1)+d;if(d>=0&&n>=1&&n<=p.total)out.push(Object.assign({},p,{n:n}))});return out}
@@ -334,7 +335,7 @@ function vLockFB(root){
     box.append(h('p',{class:'mut'},'Entre com a sua conta Google. Só o casal tem acesso.'),gb,
       /iPhone|iPad|iPod/.test(navigator.userAgent)?null:h('button',{class:'b sec full',style:'margin-top:6px',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
         fbAuth.signInWithPopup(p).catch(function(err){if(err&&err.code!=='auth/popup-closed-by-user')toast('Não consegui entrar por aqui ('+err.code+'). Use o botão do Google acima.')})}},'Outra forma de entrar'),
-      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'),h('div',{class:'hint',style:'opacity:.6'},'versão 3'));
+      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'),h('div',{class:'hint',style:'opacity:.6'},'versão 4'));
     setTimeout(desenhaBotaoGoogle,0);
   }
   else{box.append(h('p',null,'A conta ',h('b',null,S.fbUser.email||''),' não tem acesso a este app.'),h('p',{class:'mut'},'Entre com a conta do casal.'),
