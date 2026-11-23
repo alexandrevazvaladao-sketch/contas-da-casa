@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#16233d">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Contas da Casa</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -328,9 +329,14 @@ function updateHeader(){
 function liberado(){if(S.booting)return null;if(FBMODE)return S.fbOk===true?true:(S.fbUser&&S.fbOk==null?null:false);if(!db)return true;if(!S.gateReady)return null;return !!(S.me&&S.membros&&S.membros.indexOf(S.me)>=0)}
 function vLockFB(root){
   var box=h('div',{class:'card',style:'text-align:center;padding:28px 18px'},h('div',{style:'font-size:44px'},'🔒'),h('h2',{style:'margin:8px 0'},'Contas da Casa'));
-  if(!S.fbUser){box.append(h('p',{class:'mut'},'Entre com a sua conta Google. Só o casal tem acesso.'),
-    h('button',{class:'b full',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
-      fbAuth.signInWithPopup(p).catch(function(err){if(err&&(err.code==='auth/popup-blocked'||err.code==='auth/operation-not-supported-in-this-environment'||err.code==='auth/cancelled-popup-request'))fbAuth.signInWithRedirect(p);else if(err&&err.code!=='auth/popup-closed-by-user')toast('Não consegui entrar ('+err.code+').')})}},'Entrar com Google'))}
+  if(!S.fbUser){
+    var gb=h('div',{id:'gbtn',style:'display:flex;justify-content:center;min-height:44px;margin:6px 0 10px'});
+    box.append(h('p',{class:'mut'},'Entre com a sua conta Google. Só o casal tem acesso.'),gb,
+      h('button',{class:'b sec full',style:'margin-top:6px',onclick:function(){var p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+        fbAuth.signInWithPopup(p).catch(function(err){if(err&&err.code!=='auth/popup-closed-by-user')toast('Não consegui entrar por aqui ('+err.code+'). Use o botão do Google acima.')})}},'Outra forma de entrar'),
+      h('div',{class:'hint'},'No iPhone, abra o link direto no Safari (não pelo navegador de outro app).'));
+    setTimeout(desenhaBotaoGoogle,0);
+  }
   else{box.append(h('p',null,'A conta ',h('b',null,S.fbUser.email||''),' não tem acesso a este app.'),h('p',{class:'mut'},'Entre com a conta do casal.'),
     h('button',{class:'b sec full',onclick:function(){fbAuth.signOut()}},'Trocar de conta'))}
   root.append(box);
@@ -879,6 +885,24 @@ function finalizarMerc(){
       setMonth(ym,monthLanc(ym).concat([o]));S.merc={itens:[],limite:S.merc.limite,upd:0};saveMerc();closeSheet();vib();
       toast('Compra de '+brlRaw(o.valor)+' lançada em '+st.cat+'.');render();
     }},'Lançar compra'))]);
+}
+
+/* ---------- Login Google (Google Identity Services) ---------- */
+// O botão oficial do Google roda no próprio endereço do app e entrega um token ao Firebase.
+// Evita o erro "missing initial state" do iPhone, que acontece no login por redirecionamento.
+var GOOGLE_CLIENT_ID='431480530623-do1bka682aq7cjca1da7nu72nbhaes28.apps.googleusercontent.com';
+var gsiPronto=null;
+function carregaGsi(){if(gsiPronto)return gsiPronto;gsiPronto=new Promise(function(ok,bad){if(window.google&&google.accounts&&google.accounts.id)return ok();var sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.async=true;sc.onload=function(){ok()};sc.onerror=function(){gsiPronto=null;bad()};document.head.appendChild(sc)});return gsiPronto}
+function desenhaBotaoGoogle(){
+  var el=document.getElementById('gbtn');if(!el)return;
+  carregaGsi().then(function(){
+    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,auto_select:false,cancel_on_tap_outside:true,callback:function(r){
+      if(!r||!r.credential){toast('Login cancelado.');return}
+      fbAuth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(r.credential)).catch(function(e){toast('Não consegui entrar ('+(e&&e.code||'erro')+').')});
+    }});
+    var w=Math.min(360,Math.max(220,(el.clientWidth||300)));
+    google.accounts.id.renderButton(el,{type:'standard',theme:'filled_blue',size:'large',text:'signin_with',shape:'pill',locale:'pt-BR',width:w});
+  }).catch(function(){el.textContent='Não consegui carregar o botão do Google. Use “Outra forma de entrar”.'});
 }
 
 /* ---------- Gemini (Firebase AI Logic) ---------- */
