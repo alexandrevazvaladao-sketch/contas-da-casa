@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.13';
+const APP_VERSION = 'v2026.11.23.14';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -405,36 +405,49 @@ function donut(data,total){
 
 /* ---------- Início ---------- */
 function vInicio(root){
-  var c=calc(S.ym),pv=calc(ymAdd(S.ym,-1));
-  var cmp=null;if(pv.D>0){var pct=(c.D-pv.D)/pv.D*100;cmp=(pct>=0?'▲ ':'▼ ')+Math.abs(pct).toFixed(0)+'% de despesas vs '+MESES[+ymAdd(S.ym,-1).split('-')[1]-1].toLowerCase()}
+  var c=calc(S.ym),mesNome=MESES[+S.ym.split('-')[1]-1];
+  // topo: entra, sai e quanto sobra
   root.append(h('div',{class:'hero'},
-    h('small',null,'Saldo do mês'),
-    h('div',{class:'big'},brl(c.saldo)),
+    h('small',null,(c.saldo>=0?'Sobra em ':'Falta em ')+mesNome.toLowerCase()),
+    h('div',{class:'big'},brl(Math.abs(c.saldo))),
     h('div',{class:'two'},
-      h('div',null,h('small',null,'↑ Receitas'),h('b',null,brl(c.R))),
-      h('div',null,h('small',null,'↓ Despesas'),h('b',null,brl(c.D)))),
-    h('div',{class:'cmp'},'Ainda sobra (saldo + investimentos): ',h('b',null,brl(c.sobra))),
-    cmp?h('div',{class:'cmp'},cmp):null));
+      h('div',null,h('small',null,'↑ Entra'),h('b',null,brl(c.R))),
+      h('div',null,h('small',null,'↓ Sai'),h('b',null,brl(c.D)))),
+    c.I>0?h('div',{class:'cmp'},'Investido: '+brl(c.I)+' · ainda sobra '+brl(c.sobra)):null));
   if(S.owner&&S.pedidos.length)root.append(cardPedidos());
-  root.append(h('div',{class:'quick'},
-    qb('🧾','Boleto/Pix',function(){S.tab='mais';S.sub='boletos';render()}),
-    qb('💳','Fatura',function(){S.tab='mais';S.sub='fatura';render()}),
-    qb('📆','Parcela',function(){openParc(null)}),
-    qb('📋','Extrato',function(){S.tab='extrato';render()})));
-  if(!c.all.length){root.append(h('div',{class:'card empty'},'Nada lançado em '+ymLabel(S.ym)+'.',h('br'),'Toque no ',h('b',null,'+'),' para começar ou copie as fixas do mês anterior.'))}
-  // a pagar
-  if(c.pend.length){
-    var nx=c.pend.slice().sort(function(a,b){return (a.venc||'9')<(b.venc||'9')?-1:1}).slice(0,3);
-    var cp=h('div',{class:'card'},h('h3',null,'A pagar · '+brl(c.aPagar),h('a',{onclick:function(){S.tab='pagar';render()}},'ver tudo')));
-    nx.forEach(function(x){cp.append(lrow(x,true))});root.append(cp);
-  }
-  // donut
-  if(c.porCat.length){
-    var top=c.porCat.slice(0,6),rest=c.porCat.slice(6).reduce(function(s,x){return s+x[1]},0);
-    var data=top.map(function(x){return [x[0],x[1],catColor(x[0])]});if(rest>0)data.push(['Outras',rest,'#9aa6b8']);
-    var leg=h('div',{class:'leg'});data.forEach(function(d){leg.append(h('div',null,h('i',{style:'background:'+d[2]}),h('span',null,icon(d[0])+' '+d[0]),h('b',null,S.hide?'•••':Math.round(d[1]/c.D*100)+'%')))});
-    root.append(h('div',{class:'card'},h('h3',null,'Para onde foi o dinheiro'),h('div',{class:'donut'},donut(data,c.D),leg)));
-  }
+  root.append(h('button',{class:'b full',style:'margin:0 0 12px;font-size:17px;padding:15px',onclick:function(){openForm(null)}},'＋ Lançar conta ou gasto'));
+  // contas do mês, uma linha por conta (como na planilha)
+  var des=c.all.filter(function(x){return x.tipo==='despesa'}),grupos={},linhas=[];
+  des.forEach(function(x){
+    if(x.orig==='fatura'||x.proj){var k=x.fonte||'Cartão';if(!grupos[k]){grupos[k]={grupo:k,valor:0,n:0,pago:true};linhas.push(grupos[k])}grupos[k].valor+=+x.valor||0;grupos[k].n++;if(!x.pago)grupos[k].pago=false}
+    else linhas.push({item:x,valor:+x.valor||0});
+  });
+  // mesma ordem da planilha; o que não estiver nela vem depois, do maior para o menor
+  var ORD=['Energia/Água','Supermercado','Carne','Internet','Ração/Banho Selena','Financiamento','Seguro','#Nubank Casal','#Nubank Isabella','#Inter Alexandre','#Banco do Brasil Isabella','IA','Agnes','Contador','Ifood/Delivery','Gastos extras'];
+  function chave(l){var k=l.grupo?'#'+l.grupo:(l.item.cat==='Fatura cartão'?'#'+l.item.fonte:l.item.cat);var i=ORD.indexOf(k);return i<0?99:i}
+  linhas.sort(function(a,b){return (chave(a)-chave(b))||(b.valor-a.valor)});
+  var cc=h('div',{class:'card'},h('h3',null,'Contas de '+mesNome.toLowerCase(),h('span',{style:'font-weight:700;color:var(--tx)'},brl(c.D))));
+  if(!linhas.length)cc.append(h('div',{class:'hint',style:'padding:6px 0'},'Nada lançado ainda. Toque em “Lançar conta ou gasto”.'));
+  linhas.forEach(function(l){
+    if(l.grupo){
+      cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){S.filtro={tipo:'',fonte:l.grupo,pessoa:'',q:''};S.tab='extrato';render()}},
+        h('div',{class:'ic',style:'background:var(--chip)'},'💳'),
+        h('div',{class:'grow'},h('div',{class:'t'},l.grupo),h('div',{class:'s'},l.n+(l.n>1?' compras':' compra')+' · toque para ver')),
+        h('div',{class:'v'},brl(l.valor))));
+    }else{var x=l.item;
+      cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},
+        h('div',{class:'ic',style:'background:'+catColor(x.cat)+'33'},icon(x.cat)),
+        h('div',{class:'grow'},h('div',{class:'t'},x.cat==='Fatura cartão'&&x.fonte?x.fonte:(x.desc||x.cat||'').replace(/ \(previsto\)$/,'')),h('div',{class:'s'},x.pago?'✓ pago':(x.prev?'previsto':(x.venc?'vence '+isoToBR(x.venc):'a pagar')))),
+        h('div',{class:'v',style:x.prev?'opacity:.75':''},brl(x.valor))));
+    }
+  });
+  root.append(cc);
+  // entradas
+  var rec=c.all.filter(function(x){return x.tipo==='receita'});
+  var ce=h('div',{class:'card'},h('h3',null,'Entradas',h('span',{style:'font-weight:700;color:var(--ok)'},brl(c.R))));
+  rec.forEach(function(x){ce.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},h('div',{class:'ic',style:'background:var(--chip)'},(x.pessoa||'?')[0]),h('div',{class:'grow'},h('div',{class:'t'},x.desc||'Entrada'),h('div',{class:'s'},'toque para mudar')),h('div',{class:'v'},brl(x.valor))))});
+  ce.append(h('a',{style:'display:block;padding:10px 0 2px;color:var(--acc);cursor:pointer;font-weight:600',onclick:function(){openForm({tipo:'receita',cat:'Salário',pessoa:'Casal'},true)}},'＋ Adicionar entrada'));
+  root.append(ce);
   // metas
   var metas=S.config.metas||{},mk=Object.keys(metas).filter(function(k){return metas[k]>0});
   if(mk.length){
@@ -444,22 +457,33 @@ function vInicio(root){
     root.append(cm);
   }
   root.append(cardDelivery());
-  // renda da casa: as duas rendas juntas pagam tudo (sem divisão entre vocês)
-  if(c.R>0){
-    var pe=h('div',{class:'card'},h('h3',null,'Renda da casa'));
-    c.pess.filter(function(x){return x.rec>0}).forEach(function(x){pe.append(h('div',{class:'row'},h('div',{class:'ic',style:'background:var(--chip)'},x.p[0]),h('div',{class:'grow'},h('div',{class:'t'},x.p),h('div',{class:'s'},Math.round(x.rec/c.R*100)+'% da renda')),h('div',{class:'v'},brl(x.rec))))});
-    pe.append(h('div',{class:'row'},h('div',{class:'grow'},h('div',{class:'t'},'Total que entra'),h('div',{class:'s'},'paga '+Math.round(c.D/c.R*100)+'% em despesas')),h('div',{class:'v'},brl(c.R))));
-    root.append(pe);
+}
+/* Toque numa conta: muda só o valor (e se está paga), sem formulário grande. */
+function editaRapido(x){
+  if(x.proj){var p=S.parcelas.filter(function(q){return q.id===x.pid})[0];if(p)openParc(p);return}
+  var ym=S.ym,rec=x.tipo==='receita';
+  var fV=h('input',{type:'text',inputmode:'decimal',value:String(x.valor).replace('.',','),autocomplete:'off'});
+  var fN=h('input',{type:'text',value:(x.desc||'').replace(/ \(previsto\)$/,''),autocomplete:'off'});
+  var fP=h('input',{type:'checkbox'});fP.checked=!!x.pago;
+  var prox=Object.keys(S.months).filter(function(k){return k>ym&&monthLanc(k).some(function(y){return y.desc===x.desc&&y.tipo===x.tipo&&y.orig!=='fatura'})}).sort();
+  var fR=h('input',{type:'checkbox'});
+  function salvar(){
+    var v=parseVal(fV.value);if(!v){toast('Digite o valor.');fV.focus();return}
+    var nome=fN.value.trim()||x.desc,antigo=x.desc;
+    var L=monthLanc(ym).map(function(y){return y.id===x.id?Object.assign({},y,{valor:v,desc:nome,pago:rec?y.pago:fP.checked}):y});setMonth(ym,L);
+    if(fR.checked)prox.forEach(function(k){setMonth(k,monthLanc(k).map(function(y){return (y.desc===antigo&&y.tipo===x.tipo&&y.orig!=='fatura')?Object.assign({},y,{valor:v,desc:nome}):y}))});
+    vib();closeSheet();toast('Salvo: '+nome+' '+brlRaw(v)+(fR.checked?' (e nos próximos meses)':''));render();
   }
-  // cartões
-  if(c.porFonte.length){
-    var cf=h('div',{class:'card'},h('h3',null,'Por cartão / conta'));var mx=c.porFonte[0][1]||1;
-    c.porFonte.forEach(function(f){cf.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){S.filtro={tipo:'',fonte:f[0],pessoa:'',q:''};S.tab='extrato';render()}},h('div',{class:'ic',style:'background:var(--chip)'},'💳'),h('div',{class:'grow'},h('div',{class:'t'},f[0]),h('div',{class:'bar'},h('i',{style:'width:'+Math.max(3,f[1]/mx*100)+'%;background:var(--acc)'}))),h('div',{class:'v'},brl(f[1]))))});
-    root.append(cf);
-  }
-  // projeção parcelas
-  if(S.parcelas.length){var pr=h('div',{class:'card'},h('h3',null,'Parcelas nos próximos meses',h('a',{onclick:function(){S.tab='mais';S.sub='parcelas';render()}},'gerenciar')));
-    for(var i=1;i<=4;i++){var m=ymAdd(S.ym,i);pr.append(h('div',{class:'row',style:'min-height:40px;padding:6px 0'},h('div',{class:'grow'},ymLabel(m)),h('div',{class:'v'},brl(sum(parcelasDoMes(m))))))}root.append(pr)}
+  sheet([h('h2',null,(x.desc||'').replace(/ \(previsto\)$/,'')),
+    h('div',{class:'amt'},h('span',null,'R$'),fV),
+    rec?null:h('label',{class:'chk',style:'font-size:17px;padding:8px 0'},fP,'Já paguei'),
+    prox.length?h('label',{class:'chk'},fR,'Usar esse valor também em '+prox.map(function(k){return MES3[+k.split('-')[1]-1]}).join(', ')):null,
+    h('label',{class:'f'},'Nome',fN),
+    h('div',{class:'foot'},
+      h('button',{class:'b red',style:'flex:0 0 auto',onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Apagar?';return}setMonth(ym,monthLanc(ym).filter(function(y){return y.id!==x.id}));closeSheet();toast('Apagado.');render()}},'🗑'),
+      h('button',{class:'b sec',style:'flex:0 0 auto',onclick:function(){closeSheet();openForm(Object.assign({},x,{_ym:ym}))}},'Mais…'),
+      h('button',{class:'b',onclick:salvar},'Salvar'))]);
+  setTimeout(function(){try{fV.focus();fV.select()}catch(e){}},250);
 }
 var DELIV='Ifood/Delivery';
 function pedidosDe(list){return list.filter(function(x){if(x.cat!==DELIV||x.tipo==='receita'||!(x.valor>0))return false;if(/club/i.test(x.desc||''))return false;var m=(x.desc||'').match(/(\d+)\/(\d+)\s*\)?\s*$/);return !m||m[1]==='1'})}
@@ -649,7 +673,9 @@ function openForm(item,draft){
   var fVenc=h('input',{type:'date',value:it.venc||''});
   var fPago=h('input',{type:'checkbox'});fPago.checked=!!it.pago;
   var fFixa=h('input',{type:'checkbox'});fFixa.checked=!!it.fixa;
-  var det=h('details',item&&(item.venc||item.fixa)?{open:true}:{},h('summary',null,'Mais opções ▾'),
+  var det=h('details',item&&(item.venc||item.fixa)?{open:true}:{},h('summary',null,'Mais opções (data, vencimento, de quem) ▾'),
+    h('label',{class:'f'},'Data',fData),
+    h('label',{class:'f'},'De quem',chips(S.config.pessoas,st.pessoa,function(v){st.pessoa=v})),
     h('label',{class:'f'},'Vencimento',fVenc),
     h('label',{class:'chk'},fPago,'Já está pago'),
     h('label',{class:'chk'},fFixa,'Conta fixa (repete todo mês)'));
@@ -678,19 +704,18 @@ function openForm(item,draft){
       openForm({tipo:r.tipo,valor:r.valor,desc:r.desc,cat:r.cat||(r.tipo==='receita'?'Salário':st.cat),fonte:f,pessoa:st.pessoa,data:fData.value,_notif:1},true);
       toast('Preenchido pelo aviso. Confira e salve.');
     }},'Preencher com o aviso'));
-  sheet([h('h2',null,item?'Editar lançamento':'Novo lançamento'),notif,seg,
+  sheet([h('h2',null,item?'Editar lançamento':'Novo lançamento'),seg,
     h('div',{class:'amt'},h('span',null,'R$'),fVal),
     fDesc,h('div',{style:'height:12px'}),
     h('label',{class:'f'},'Categoria'),catW,
-    h('label',{class:'f'},'De quem'),chips(S.config.pessoas,st.pessoa,function(v){st.pessoa=v}),
-    h('label',{class:'f'},'Cartão / conta'),chips(S.config.fontes,st.fonte,function(v){st.fonte=v;if(!item)st.pessoa=st.pessoa}),
-    h('label',{class:'f'},'Data',fData),det,
+    h('label',{class:'f'},'Pago com'),chips(S.config.fontes,st.fonte,function(v){st.fonte=v}),
+    det,
     it.itens&&it.itens.length?(function(){var dd=h('details',null,h('summary',null,'🧾 '+it.itens.length+' itens da compra ▾'));it.itens.forEach(function(x){dd.append(h('div',{class:'it'},h('div',{style:'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},(x.n||'Item')+((x.q||1)>1?' ('+x.q+'×'+brlRaw(x.v)+')':'')),h('b',null,brlRaw(x.v*(x.q||1)))))});return dd})():null,
     it.venc?h('a',{class:'b sec full',style:'display:block;text-align:center;text-decoration:none;margin-top:8px;line-height:22px',target:'_blank',rel:'noopener',href:'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('💸 Pagar: '+(it.desc||'conta')+' · '+brlRaw(it.valor||0))+'&dates='+it.venc.replace(/-/g,'')+'/'+dPlus(it.venc).replace(/-/g,'')+'&details='+encodeURIComponent('Contas da Casa')},'🔔 Lembrar no Google Agenda'):null,
     it.codigo?h('button',{type:'button',class:'b sec full',style:'margin-top:8px',onclick:function(){
       try{navigator.clipboard.writeText(it.codigo).then(function(){toast('Código copiado. Cole no app do banco para pagar.')},function(){toast('Não consegui copiar.')})}catch(e){toast('Não consegui copiar.')}
     }},'📋 Copiar código para pagar no banco'):null,
-    foot]);
+    notif,foot]);
   if(!item&&!d0)setTimeout(function(){try{fVal.focus()}catch(e){}},250);
 }
 
