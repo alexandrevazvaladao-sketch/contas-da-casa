@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.15';
+const APP_VERSION = 'v2026.11.23.16';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1075,10 +1075,18 @@ function vCfg(root){
           ((j.months[k]||{}).lanc||[]).forEach(function(x){if(x&&x.id&&!ids[x.id]){cur.push(x);nov++;mudou[k]=1}});S.months[k]={lanc:cur}});
         var pids={};S.parcelas.forEach(function(x){pids[x.id]=1});(j.parcelas||[]).forEach(function(x){if(x&&x.id&&!pids[x.id]){S.parcelas.push(x);nov++}});
         var jc=j.config||{},metas=Object.assign({},jc.metas||{},S.config.metas||{});
+        // ajustes pontuais na previsão: {ym,desc,valor,cat,fonte}; valor 0 apaga a linha
+        if(mig&&Array.isArray(j.ajustes))j.ajustes.forEach(function(a){
+          if(!S.months[a.ym]&&!a.valor)return;
+          var L=monthLanc(a.ym).slice(),i=L.findIndex(function(x){return x.desc===a.desc&&x.orig!=='fatura'});
+          if(i>=0){if(a.valor)L[i]=Object.assign({},L[i],{valor:a.valor});else L.splice(i,1)}
+          else if(a.valor)L.push({id:uid(),desc:a.desc,valor:a.valor,tipo:a.tipo||'despesa',cat:a.cat||'Outros',fonte:a.fonte||'',pessoa:'Casal',data:'',pago:false,fixa:false,orig:'previsao',prev:true});
+          S.months[a.ym]={lanc:L};mudou[a.ym]=1;nov++;
+        });
         if(mig)S.config.migracoes=(S.config.migracoes||[]).concat([j.migracao]);
         S.config=mergeCfg(Object.assign({},S.config,{metas:metas,cats:(S.config.cats||[]).concat((jc.cats||[]).filter(function(c){return S.config.cats.indexOf(c)<0}))}));
         saveConfig();saveParcelas();Object.keys(mudou).forEach(function(k){save('meses/'+k,S.months[k])});persistLocal();
-        toast(rem?'Corrigido: '+nov+' itens no mês certo.':(nov?nov+' itens importados.':'Nada novo: esse backup já estava no app.'));S.sub='';render();
+        toast(j.ajustes&&mig?'Previsão ajustada ('+j.ajustes.length+' mudanças).':rem?'Corrigido: '+nov+' itens no mês certo.':(nov?nov+' itens importados.':'Nada novo: esse backup já estava no app.'));S.sub='';render();
       }catch(e){toast('Esse texto não parece um backup válido.')}
     }},'Importar backup (sem apagar nada)')));
 }
