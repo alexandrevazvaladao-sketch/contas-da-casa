@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.27';
+const APP_VERSION = 'v2026.11.23.28';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -244,11 +244,18 @@ function group(arr,k){var m={};arr.forEach(function(x){var key=x[k]||'—';m[key
 function planejado(x){return x.orig==='planilha'||x.orig==='previsao'}
 function mesModelo(ym){var ks=Object.keys(S.months).filter(function(k){return k<ym&&monthLanc(k).some(planejado)}).sort();return ks.length?ks[ks.length-1]:null}
 function virtuais(ym){
-  if(monthLanc(ym).some(planejado))return [];
-  var k=mesModelo(ym);if(!k)return [];
-  var comParc={};S.parcelas.forEach(function(p){comParc[p.fonte]=1});
-  return monthLanc(k).filter(function(x){return planejado(x)&&x.tipo!=='investimento'&&!(x.cat==='Fatura cartão'&&comParc[x.fonte])})
-    .map(function(x){return Object.assign({},x,{id:'v'+ym+x.id,virt:true,prev:x.tipo!=='receita',pago:false,venc:''})});
+  var atual=monthLanc(ym),tem={};atual.forEach(function(x){tem[x.desc]=1});
+  var out=[];
+  if(!atual.some(planejado)){
+    var k=mesModelo(ym);
+    if(k){var comParc={};S.parcelas.forEach(function(p){comParc[p.fonte]=1});
+      monthLanc(k).filter(function(x){return planejado(x)&&!x.naoRepete&&x.tipo!=='investimento'&&!(x.cat==='Fatura cartão'&&comParc[x.fonte])})
+        .forEach(function(x){out.push(Object.assign({},x,{id:'v'+ym+x.id,virt:true,prev:x.tipo!=='receita',pago:false,venc:''}));tem[x.desc]=1})}
+  }
+  // contas marcadas "repetir todo mês" lançadas à mão: repete a mais recente de cada nome
+  Object.keys(S.months).filter(function(k){return k<ym&&k>=INICIO}).sort().reverse().forEach(function(k){
+    monthLanc(k).forEach(function(x){if(x.fixa&&!x.naoRepete&&!planejado(x)&&x.orig!=='fatura'&&!tem[x.desc]){tem[x.desc]=1;out.push(Object.assign({},x,{id:'v'+ym+x.id,virt:true,prev:x.tipo==='despesa',pago:false,venc:''}))}})});
+  return out;
 }
 function materializa(ym){var V=virtuais(ym);if(!V.length)return {};var mapa={},novos=V.map(function(x){var y=Object.assign({},x,{id:uid(),orig:'previsao'});delete y.virt;mapa[x.id]=y.id;return y});setMonth(ym,monthLanc(ym).concat(novos));return mapa}
 /* ---------- guardado (reserva) ----------
@@ -566,7 +573,7 @@ function vInicio(root){
     }else{var x=l.item;
       cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},
         h('div',{class:'ic',style:'background:'+catColor(x.cat)+'33'},icon(x.cat)),
-        h('div',{class:'grow'},h('div',{class:'t'},x.cat==='Fatura cartão'&&x.fonte?x.fonte:(x.desc||x.cat||'').replace(/ \(previsto\)$/,'')),h('div',{class:'s'},x.pago?'✓ pago':(x.prev?(x.usado?'resta do previsto · já gastou '+brl(x.usado):'previsto'):(x.orig==='auto'?'📲 lançado automático':(x.venc?'vence '+isoToBR(x.venc):'a pagar'))))),
+        h('div',{class:'grow'},h('div',{class:'t'},x.cat==='Fatura cartão'&&x.fonte?x.fonte:(x.desc||x.cat||'').replace(/ \(previsto\)$/,'')),h('div',{class:'s'},(function(){var nm=(x.desc||'').replace(/ \(previsto\)$/,''),dv=diaVenc(nm)||(x.venc?+x.venc.slice(8):0),rp=!x.naoRepete&&(x.fixa||planejado(x));var t=x.pago?'✓ pago':(x.prev?(x.usado?'resta do previsto · já gastou '+brl(x.usado):'previsto'):(x.orig==='auto'?'📲 lançado automático':'a pagar'));if(dv&&!x.pago)t+=' · vence dia '+dv;if(rp)t+=' · 🔁';return t})())),
         h('div',{class:'v',style:x.prev?'opacity:.75':''},brl(x.valor))));
     }
   });
@@ -607,10 +614,15 @@ function editaRapido(x){
   var fP=h('input',{type:'checkbox'});fP.checked=!!x.pago;
   var prox=Object.keys(S.months).filter(function(k){return k>ym&&monthLanc(k).some(function(y){return y.desc===x.desc&&y.tipo===x.tipo&&y.orig!=='fatura'})}).sort();
   var fR=h('input',{type:'checkbox'});
+  var nome0=(x.desc||'').replace(/ \(previsto\)$/,'');
+  var fD=h('input',{type:'number',inputmode:'numeric',min:'1',max:'31',value:diaVenc(nome0)||(x.venc?+x.venc.slice(8):''),placeholder:'—',style:'width:90px;text-align:center;font-size:18px'});
+  var fRep=h('input',{type:'checkbox'});fRep.checked=!x.naoRepete&&(!!x.fixa||planejado(x));
   function salvar(){
     var v=parseVal(fV.value);if(!v){toast('Digite o valor.');fV.focus();return}
     var nome=fN.value.trim()||x.desc,antigo=x.desc;
-    var L=monthLanc(ym).map(function(y){return y.id===x.id?Object.assign({},y,{valor:v,desc:nome,pago:rec?y.pago:fP.checked}):y});setMonth(ym,L);
+    var dia=Math.max(0,Math.min(31,parseInt(fD.value,10)||0)),vd=Object.assign({},S.config.vencDia||{});if(dia)vd[nome.replace(/ \(previsto\)$/,'')]=dia;else delete vd[nome.replace(/ \(previsto\)$/,'')];if(JSON.stringify(vd)!==JSON.stringify(S.config.vencDia||{})){S.config.vencDia=vd;saveConfig()}
+    var rep=fRep.checked;
+    var L=monthLanc(ym).map(function(y){if(y.id!==x.id)return y;var o=Object.assign({},y,{valor:v,desc:nome,pago:rec?y.pago:fP.checked,fixa:rep&&!planejado(y)?true:(planejado(y)?!!y.fixa:false),naoRepete:!rep});if(dia&&!rec)o.venc=dataVenc(ym,dia);if(!o.naoRepete)delete o.naoRepete;return o});setMonth(ym,L);
     if(fR.checked)prox.forEach(function(k){setMonth(k,monthLanc(k).map(function(y){return (y.desc===antigo&&y.tipo===x.tipo&&y.orig!=='fatura')?Object.assign({},y,{valor:v,desc:nome}):y}))});
     vib();closeSheet();toast('Salvo: '+nome+' '+brlRaw(v)+(fR.checked?' (e nos próximos meses)':''));render();
   }
@@ -618,6 +630,8 @@ function editaRapido(x){
     h('div',{class:'amt'},h('span',null,'R$'),fV),
     rec?null:h('label',{class:'chk',style:'font-size:17px;padding:8px 0'},fP,'Já paguei'),
     prox.length?h('label',{class:'chk'},fR,'Usar esse valor também em '+prox.map(function(k){return MES3[+k.split('-')[1]-1]}).join(', ')):null,
+    rec?null:h('div',{style:'display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0'},h('span',{style:'font-weight:600'},'📅 Vence todo dia'),fD),
+    h('label',{class:'chk',style:'font-size:16px;padding:6px 0'},fRep,'🔁 Repetir todo mês'),
     h('label',{class:'f'},'Nome',fN),
     h('div',{class:'foot'},
       h('button',{class:'b red',style:'flex:0 0 auto',onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Apagar?';return}setMonth(ym,monthLanc(ym).filter(function(y){return y.id!==x.id}));closeSheet();toast('Apagado.');render()}},'🗑'),
@@ -872,7 +886,7 @@ function openForm(item,draft){
     h('label',{class:'f'},'De quem',chips(S.config.pessoas,st.pessoa,function(v){st.pessoa=v})),
     h('label',{class:'f'},'Vencimento',fVenc),
     h('label',{class:'chk'},fPago,'Já está pago'),
-    h('label',{class:'chk'},fFixa,'Conta fixa (repete todo mês)'));
+    h('label',{class:'chk'},fFixa,'🔁 Repetir todo mês'));
   function doSave(again){
     delete it._notif;
     var o=Object.assign({},it,{tipo:st.tipo,desc:fDesc.value.trim()||st.cat||'',valor:parseVal(fVal.value),cat:st.cat,fonte:st.fonte,pessoa:st.pessoa,data:fData.value,venc:fVenc.value,pago:fPago.checked,fixa:fFixa.checked});
@@ -882,6 +896,7 @@ function openForm(item,draft){
     var ym=(o.orig==='fatura'&&ymOrig)?ymOrig:((o.data||o.venc||'').slice(0,7)||ymOrig||S.ym);
     if(ymOrig&&ymOrig!==ym)setMonth(ymOrig,monthLanc(ymOrig).filter(function(x){return x.id!==o.id}));
     var L=monthLanc(ym).slice();var i=L.findIndex(function(x){return x.id===o.id});if(i>=0)L[i]=o;else L.push(o);
+    if(o.fixa&&o.venc){var vd2=Object.assign({},S.config.vencDia||{});vd2[o.desc]=+o.venc.slice(8);S.config.vencDia=vd2;saveConfig()}
     setMonth(ym,L);S.last={cat:o.cat,fonte:o.fonte,pessoa:o.pessoa};pref('last',S.last);vib();
     toast((item?'Atualizado: ':'Salvo: ')+(o.desc||'lançamento')+' '+brlRaw(o.valor)+(ym!==S.ym?' em '+ymLabel(ym):''));
     if(again){closeSheet();render();openForm(null)}else{closeSheet();render()}
