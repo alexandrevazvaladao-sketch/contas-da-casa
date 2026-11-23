@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.24';
+const APP_VERSION = 'v2026.11.23.25';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -537,7 +537,7 @@ function vInicio(root){
   // contas do mês, uma linha por conta (como na planilha)
   var des=c.all.filter(function(x){return x.tipo==='despesa'}),grupos={},linhas=[];
   des.forEach(function(x){
-    if(x.orig==='fatura'||x.proj){var k=x.fonte||'Cartão';if(!grupos[k]){grupos[k]={grupo:k,valor:0,n:0,pago:true};linhas.push(grupos[k])}grupos[k].valor+=+x.valor||0;grupos[k].n++;if(!x.pago)grupos[k].pago=false}
+    if(x.orig==='fatura'||x.proj||(ehCartao(x.fonte)&&!x.prev)){var k=x.fonte||'Cartão';if(!grupos[k]){grupos[k]={grupo:k,valor:0,n:0,pago:true,itens:[]};linhas.push(grupos[k])}grupos[k].valor+=+x.valor||0;grupos[k].n++;grupos[k].itens.push(x);if(!x.pago)grupos[k].pago=false}
     else linhas.push({item:x,valor:+x.valor||0});
   });
   // mesma ordem da planilha; o que não estiver nela vem depois, do maior para o menor
@@ -548,9 +548,9 @@ function vInicio(root){
   if(!linhas.length)cc.append(h('div',{class:'hint',style:'padding:6px 0'},'Nada lançado ainda. Toque em “Lançar conta ou gasto”.'));
   linhas.forEach(function(l){
     if(l.grupo){
-      cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){S.filtro={tipo:'',fonte:l.grupo,pessoa:'',q:''};S.tab='extrato';render()}},
+      cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){if(l.n===1){editaRapido(l.itens[0]);return}S.filtro={tipo:'',fonte:l.grupo,pessoa:'',q:''};S.tab='extrato';render()}},
         h('div',{class:'ic',style:'background:var(--chip)'},'💳'),
-        h('div',{class:'grow'},h('div',{class:'t'},l.grupo),h('div',{class:'s'},l.n+(l.n>1?' compras':' compra')+' · toque para ver')),
+        h('div',{class:'grow'},h('div',{class:'t'},l.grupo),h('div',{class:'s'},l.n===1?(l.itens[0].cat==='Fatura cartão'?'fatura do cartão':'1 compra')+(l.pago?' · ✓ pago':''):l.n+' compras · toque para ver')),
         h('div',{class:'v'},brl(l.valor))));
     }else{var x=l.item;
       cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},
