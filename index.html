@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.11';
+const APP_VERSION = 'v2026.11.23.12';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -240,7 +240,8 @@ function group(arr,k){var m={};arr.forEach(function(x){var key=x[k]||'—';m[key
 function calc(ym){
   var L=monthLanc(ym);
   var imp={};L.forEach(function(x){if(x.orig==='fatura')imp[x.fonte]=1});
-  var proj=parcelasDoMes(ym).filter(function(p){return !imp[p.fonte]}).map(function(p){return {id:'p'+p.id,pid:p.id,desc:p.desc+' ('+p.n+'/'+p.total+')',valor:p.valor,tipo:'despesa',cat:'Parcelas',fonte:p.fonte,pessoa:p.pessoa,proj:true,pago:false}});
+  var tot={};L.forEach(function(x){if(x.prev&&x.cat==='Fatura cartão')tot[x.fonte]=1});   // total previsto do cartão já inclui as parcelas
+  var proj=parcelasDoMes(ym).filter(function(p){return !imp[p.fonte]&&!tot[p.fonte]}).map(function(p){return {id:'p'+p.id,pid:p.id,desc:p.desc+' ('+p.n+'/'+p.total+')',valor:p.valor,tipo:'despesa',cat:'Parcelas',fonte:p.fonte,pessoa:p.pessoa,proj:true,pago:false}});
   L=L.filter(function(x){return !(x.prev&&imp[x.fonte])});   // previsto some quando a fatura daquele cartão chega
   var all=L.concat(proj);
   // Igual à planilha: investimento não entra nas despesas; "ainda sobra" = saldo + investimentos.
@@ -255,7 +256,7 @@ function calc(ym){
   des.filter(function(x){return x.pessoa==='Casal'}).forEach(function(x){var f=(x.fonte||'').toLowerCase();var who=ind.filter(function(p){return f.indexOf(p.toLowerCase())>=0});if(who.length===1){pago[who[0]]+=(+x.valor||0);ident+=(+x.valor||0)}});
   var acerto=ind.map(function(p){var share=(S.config.divisao==='proporcional'&&totRec>0)?recP[p]/totRec:1/ind.length;return {p:p,pagou:pago[p],devia:ident*share,dif:pago[p]-ident*share}});
   var pend=des.filter(function(x){return !x.pago&&!x.proj&&x.orig!=='fatura'});
-  return {L:L,all:all,proj:proj,R:R,D:D,I:I,saldo:R-D,sobra:R-D+I,porFonte:group(des,'fonte'),porCat:group(des,'cat'),pess:pess,casal:casal,acerto:acerto,casalSemDono:casal-ident,pend:pend,aPagar:sum(pend)};
+  return {L:L,all:all,proj:proj,R:R,D:D,I:I,saldo:R-D,sobra:R-D+I,porFonte:group(des,'fonte'),porCat:group(des,'cat'),porCatReal:group(des.filter(function(x){return !x.prev}),'cat'),pess:pess,casal:casal,acerto:acerto,casalSemDono:casal-ident,pend:pend,aPagar:sum(pend)};
 }
 
 /* ---------- boleto ---------- */
@@ -437,7 +438,7 @@ function vInicio(root){
   // metas
   var metas=S.config.metas||{},mk=Object.keys(metas).filter(function(k){return metas[k]>0});
   if(mk.length){
-    var cm=h('div',{class:'card'},h('h3',null,'Metas de gasto'));var pc={};c.porCat.forEach(function(x){pc[x[0]]=x[1]});
+    var cm=h('div',{class:'card'},h('h3',null,'Metas de gasto'));var pc={};c.porCatReal.forEach(function(x){pc[x[0]]=x[1]});
     mk.forEach(function(k){var g=pc[k]||0,lim=metas[k],p=g/lim*100;var col=p>100?'var(--bad)':p>80?'#e0a019':'var(--ok)';
       cm.append(h('div',{class:'row'},h('div',{class:'ic',style:'background:var(--chip)'},icon(k)),h('div',{class:'grow'},h('div',{class:'t'},k),h('div',{class:'s'},brl(g)+' de '+brl(lim)+(p>100?' · estourou '+brl(g-lim):' · resta '+brl(lim-g))),h('div',{class:'bar'},h('i',{style:'width:'+Math.min(100,p)+'%;background:'+col}))),h('div',{class:'v',style:'color:'+col},Math.round(p)+'%')))});
     root.append(cm);
@@ -807,7 +808,7 @@ function vFat(root){
 /* ---------- Mercado ---------- */
 function mercTotal(){return S.merc.itens.reduce(function(s,x){return s+x.v*(x.q||1)},0)}
 function saveMerc(){S.merc.upd=Date.now();pref('merc',S.merc);if(db)save('mercado/atual',S.merc)}
-function gastoCat(ym,cat){return sum(calc(ym).all.filter(function(x){return x.tipo!=='receita'&&x.cat===cat}))}
+function gastoCat(ym,cat){return sum(calc(ym).all.filter(function(x){return x.tipo!=='receita'&&!x.prev&&x.cat===cat}))}
 function vMercado(root){
   var tot=mercTotal(),n=S.merc.itens.reduce(function(s,x){return s+(x.q||1)},0);
   var meta=+(S.config.metas||{})['Supermercado']||0,ja=gastoCat(S.ym,'Supermercado');
