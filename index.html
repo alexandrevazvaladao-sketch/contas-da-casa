@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.12';
+const APP_VERSION = 'v2026.11.23.13';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -444,10 +444,13 @@ function vInicio(root){
     root.append(cm);
   }
   root.append(cardDelivery());
-  // pessoas
-  var pe=h('div',{class:'card'},h('h3',null,'Cada um',h('a',{onclick:function(){S.tab='mais';S.sub='pessoas';render()}},'detalhes')));
-  c.pess.forEach(function(x){pe.append(h('div',{class:'row'},h('div',{class:'ic',style:'background:var(--chip)'},x.p[0]),h('div',{class:'grow'},h('div',{class:'t'},x.p),h('div',{class:'s'},'recebe '+brl(x.rec)+' · parte do casal '+brl(x.parte))),h('div',{class:'v '+signCls(x.sobra)},brl(x.sobra))))});
-  root.append(pe);
+  // renda da casa: as duas rendas juntas pagam tudo (sem divisão entre vocês)
+  if(c.R>0){
+    var pe=h('div',{class:'card'},h('h3',null,'Renda da casa'));
+    c.pess.filter(function(x){return x.rec>0}).forEach(function(x){pe.append(h('div',{class:'row'},h('div',{class:'ic',style:'background:var(--chip)'},x.p[0]),h('div',{class:'grow'},h('div',{class:'t'},x.p),h('div',{class:'s'},Math.round(x.rec/c.R*100)+'% da renda')),h('div',{class:'v'},brl(x.rec))))});
+    pe.append(h('div',{class:'row'},h('div',{class:'grow'},h('div',{class:'t'},'Total que entra'),h('div',{class:'s'},'paga '+Math.round(c.D/c.R*100)+'% em despesas')),h('div',{class:'v'},brl(c.R))));
+    root.append(pe);
+  }
   // cartões
   if(c.porFonte.length){
     var cf=h('div',{class:'card'},h('h3',null,'Por cartão / conta'));var mx=c.porFonte[0][1]||1;
@@ -570,7 +573,7 @@ function criarLembretes(list){
 
 /* ---------- Mais ---------- */
 function vMais(root){
-  var items=[['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['👫','Divisão e acerto do casal','Quanto cada um paga, sobra e quem deve a quem','pessoas'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas, divisão','ajustes']];
+  var items=[['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
   var cd=h('div',{class:'card menu',style:'padding:2px 12px'});
   items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
   root.append(cd);
@@ -984,7 +987,6 @@ function vCfg(root){
   var tR=h('textarea',{style:'min-height:140px'});tR.value=(c.regras||[]).map(function(r){return r[0]+' = '+r[1]}).join('\n');
   var dv=c.divisao;
   root.append(h('div',{class:'card'},
-    h('label',{class:'f'},'Como dividir o que é do casal'),chips([['igual','Meio a meio'],['proporcional','Proporcional ao salário']],dv,function(v){dv=v}),
     h('label',{class:'f'},'Metas de gasto por mês (categoria = valor)',tM),
     h('label',{class:'f'},'Pessoas (uma por linha)',tP),
     h('label',{class:'f'},'Cartões e contas',tF),
