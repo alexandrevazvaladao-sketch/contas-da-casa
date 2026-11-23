@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.19';
+const APP_VERSION = 'v2026.11.23.20';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -422,8 +422,8 @@ function vInicio(root){
   var c=calc(S.ym),mesNome=MESES[+S.ym.split('-')[1]-1];
   // topo: entra, sai e quanto sobra
   root.append(h('div',{class:'hero'},
-    h('small',null,(c.saldo>=0?'Sobra em ':'Falta em ')+mesNome.toLowerCase()),
-    h('div',{class:'big'},brl(Math.abs(c.saldo))),
+    h('small',null,'Saldo de '+mesNome.toLowerCase()+(c.saldo<0?' (vai faltar)':' (vai sobrar)')),
+    h('div',{class:'big',style:c.saldo<0?'color:#ff9a9a':''},brl(c.saldo)),
     h('div',{class:'two'},
       h('div',null,h('small',null,'↑ Entra'),h('b',null,brl(c.R))),
       h('div',null,h('small',null,'↓ Sai'),h('b',null,brl(c.D)))),
@@ -475,11 +475,12 @@ function vInicio(root){
 }
 function cardPrevisao(){
   var cp=h('div',{class:'card'},h('h3',null,'Próximos meses'),h('div',{class:'hint',style:'margin:-4px 0 6px'},'Previsto com base na planilha: contas, salários e parcelas. Toque num mês para ver.'));
-  var ac=0;
+  var ac=calc(S.ym).saldo;
+  cp.append(h('div',{class:'s',style:'margin-bottom:4px'},'Começando com o saldo de '+MESES[+S.ym.split('-')[1]-1].toLowerCase()+': '+brl(ac)));
   for(var i=1;i<=12;i++){(function(m){var c=calc(m);ac+=c.saldo;var p=m.split('-');
     cp.append(h('div',{class:'row',style:'cursor:pointer;min-height:46px;padding:6px 0',onclick:function(){S.ym=m;vib();render();scrollTo(0,0)}},
       h('div',{class:'grow'},h('div',{class:'t'},MESES[+p[1]-1]+' '+p[0]),h('div',{class:'s'},'entra '+brl(c.R)+' · sai '+brl(c.D))),
-      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(c.saldo)},(c.saldo>=0?'sobra ':'falta ')+brl(Math.abs(c.saldo))),h('div',{class:'s',style:'font-size:12px'},'acumulado '+brl(ac)))))})(ymAdd(S.ym,i))}
+      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(c.saldo)},brl(c.saldo)),h('div',{class:'s',style:'font-size:12px;color:'+(ac<0?'var(--bad)':'inherit')},'acumulado '+brl(ac)))))})(ymAdd(S.ym,i))}
   return cp;
 }
 /* Toque numa conta: muda só o valor (e se está paga), sem formulário grande. */
@@ -514,7 +515,7 @@ var DELIV='Ifood/Delivery';
 function pedidosDe(list){return list.filter(function(x){if(x.cat!==DELIV||x.tipo==='receita'||x.prev||!(x.valor>0))return false;if(/club/i.test(x.desc||''))return false;var m=(x.desc||'').match(/(\d+)\/(\d+)\s*\)?\s*$/);return !m||m[1]==='1'})}
 function cardDelivery(){
   var c=calc(S.ym),pv=calc(ymAdd(S.ym,-1));
-  var dl=c.all.filter(function(x){return x.cat===DELIV&&x.tipo!=='receita'}),tot=sum(dl),ped=pedidosDe(c.all),pvTot=sum(pv.all.filter(function(x){return x.cat===DELIV&&x.tipo!=='receita'}));
+  var dl=c.all.filter(function(x){return x.cat===DELIV&&x.tipo!=='receita'&&!x.prev}),tot=sum(dl),ped=pedidosDe(c.all),pvTot=sum(pv.all.filter(function(x){return x.cat===DELIV&&x.tipo!=='receita'&&!x.prev}));
   var meta=+(S.config.metas||{})[DELIV]||0;
   var card=h('div',{class:'card'},h('h3',null,'🍔 iFood e delivery',h('a',{onclick:function(){S.filtro={tipo:'',fonte:'',pessoa:'',q:'food'};S.tab='extrato';render()}},'ver pedidos')));
   if(!tot){card.append(h('div',{class:'hint',style:'margin:0'},'Nenhum delivery lançado neste mês. 👏'+(pvTot?' Mês passado foram '+brl(pvTot)+'.':'')));return card}
