@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.10';
+const APP_VERSION = 'v2026.11.23.11';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1011,14 +1011,21 @@ function vCfg(root){
     h('button',{class:'b sec full',onclick:function(){
       try{var j=JSON.parse(rs.value);if(!j||!j.months)throw 0;
         // Mescla: só acrescenta o que ainda não existe (pelo id); nada que já está no app é apagado.
-        var nov=0,mudou={};
+        var nov=0,mudou={},rem=0;
+        // Backup de correção: troca de uma vez só o que veio de importações anteriores (planilha/fatura); lançamentos feitos à mão ficam.
+        var mig=j.migracao&&!(S.config.migracoes||[]).some(function(m){return m===j.migracao});
+        if(mig&&Array.isArray(j.substituir)){
+          Object.keys(S.months).forEach(function(k){var L=monthLanc(k),K=L.filter(function(x){return j.substituir.indexOf(x.orig)<0});if(K.length!==L.length){rem+=L.length-K.length;S.months[k]={lanc:K};mudou[k]=1}});
+          if(j.substituirParcelas){rem+=S.parcelas.length;S.parcelas=[]}
+        }
         Object.keys(j.months).forEach(function(k){var cur=monthLanc(k).slice(),ids={};cur.forEach(function(x){ids[x.id]=1});
           ((j.months[k]||{}).lanc||[]).forEach(function(x){if(x&&x.id&&!ids[x.id]){cur.push(x);nov++;mudou[k]=1}});S.months[k]={lanc:cur}});
         var pids={};S.parcelas.forEach(function(x){pids[x.id]=1});(j.parcelas||[]).forEach(function(x){if(x&&x.id&&!pids[x.id]){S.parcelas.push(x);nov++}});
         var jc=j.config||{},metas=Object.assign({},jc.metas||{},S.config.metas||{});
+        if(mig)S.config.migracoes=(S.config.migracoes||[]).concat([j.migracao]);
         S.config=mergeCfg(Object.assign({},S.config,{metas:metas,cats:(S.config.cats||[]).concat((jc.cats||[]).filter(function(c){return S.config.cats.indexOf(c)<0}))}));
         saveConfig();saveParcelas();Object.keys(mudou).forEach(function(k){save('meses/'+k,S.months[k])});persistLocal();
-        toast(nov?nov+' itens importados.':'Nada novo: esse backup já estava no app.');S.sub='';render();
+        toast(rem?'Corrigido: '+nov+' itens no mês certo.':(nov?nov+' itens importados.':'Nada novo: esse backup já estava no app.'));S.sub='';render();
       }catch(e){toast('Esse texto não parece um backup válido.')}
     }},'Importar backup (sem apagar nada)')));
 }
