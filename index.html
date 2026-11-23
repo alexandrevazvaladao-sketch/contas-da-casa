@@ -161,16 +161,16 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.26';
+const APP_VERSION = 'v2026.11.23.27';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
-var ICON={'Energia/Água':'💡','Supermercado':'🛒','Carne':'🥩','Internet':'📶','Financiamento':'🏠','Seguro':'🛡️','Ração/Banho Selena':'🐶','Gasolina':'⛽','Remédios':'💊','IPTU':'🏛️','Contador':'🧾','IA':'🤖','Ipasgo':'🩺','Celular':'📱','Ifood/Delivery':'🍔','Assinaturas':'📺','Transporte':'🚗','Investimento Viagem':'✈️','Amortização':'📉','Reserva de emergência':'🏦','Gastos extras':'🛍️','Parcelas':'💳','Salário':'💰','Outros':'🏷️','Restaurante/Lazer':'🍽️','Saúde':'🩺','Carro/Manutenção':'🔧','Casa':'🛋️','Viagem':'🧳','Enxoval':'🍼','Compras online':'📦','Taxas':'🏦','Agnes':'👶','Fatura cartão':'💳'};
+var ICON={'Energia':'💡','Água':'💧','Energia/Água':'💡','Supermercado':'🛒','Carne':'🥩','Internet':'📶','Financiamento':'🏠','Seguro':'🛡️','Ração/Banho Selena':'🐶','Gasolina':'⛽','Remédios':'💊','IPTU':'🏛️','Contador':'🧾','IA':'🤖','Ipasgo':'🩺','Celular':'📱','Ifood/Delivery':'🍔','Assinaturas':'📺','Transporte':'🚗','Investimento Viagem':'✈️','Amortização':'📉','Reserva de emergência':'🏦','Gastos extras':'🛍️','Parcelas':'💳','Salário':'💰','Outros':'🏷️','Restaurante/Lazer':'🍽️','Saúde':'🩺','Carro/Manutenção':'🔧','Casa':'🛋️','Viagem':'🧳','Enxoval':'🍼','Compras online':'📦','Taxas':'🏦','Agnes':'👶','Fatura cartão':'💳'};
 var PAL=['#3b6cf0','#f0883b','#12a37a','#d64a8c','#8e5cf0','#e0b524','#2aa9d6','#e05a4a','#5d7a95','#7cc04b','#b07a4f','#9aa6b8'];
 var DEF={
   pessoas:['Alexandre','Isabella','Casal'],
   fontes:['Nubank Casal','Nubank Isabella','Inter Alexandre','Banco do Brasil Isabella','Boleto/Pix'],
-  cats:['Energia/Água','Supermercado','Carne','Internet','Financiamento','Seguro','Ração/Banho Selena','Gasolina','Remédios','IPTU','Contador','IA','Ipasgo','Celular','Ifood/Delivery','Restaurante/Lazer','Compras online','Casa','Saúde','Carro/Manutenção','Viagem','Agnes','Enxoval','Fatura cartão','Assinaturas','Transporte','Taxas','Investimento Viagem','Amortização','Reserva de emergência','Gastos extras','Parcelas','Salário','Outros'],
+  cats:['Energia','Água','Supermercado','Carne','Internet','Financiamento','Seguro','Ração/Banho Selena','Gasolina','Remédios','IPTU','Contador','IA','Ipasgo','Celular','Ifood/Delivery','Restaurante/Lazer','Compras online','Casa','Saúde','Carro/Manutenção','Viagem','Agnes','Enxoval','Fatura cartão','Assinaturas','Transporte','Taxas','Investimento Viagem','Amortização','Reserva de emergência','Gastos extras','Parcelas','Salário','Outros'],
   divisao:'igual',metas:{},
   regras:[['juliana step','Agnes'],['leonardo jos','Casa'],['artthur','Casa'],['agorasoumae','Enxoval'],['ifood club','Ifood/Delivery'],['estorno de ifood','Ifood/Delivery'],['ifood','Ifood/Delivery'],['99food','Ifood/Delivery'],['max supermercado','Supermercado'],['super vi','Supermercado'],['contaja','Contador'],['petz','Ração/Banho Selena'],['hinova','Seguro'],['anthropic','IA'],['the fiber','Internet'],['decolar','Viagem'],['shopee','Compras online'],['mercadol','Compras online'],['amazon','Compras online'],['olx','Compras online'],['iof','Taxas'],['desconto antecip','Taxas'],['otica','Saúde'],['medicina','Saúde'],['restaurante','Restaurante/Lazer'],['sorvet','Restaurante/Lazer'],['lanches','Restaurante/Lazer'],['autoglass','Carro/Manutenção'],['borracha','Carro/Manutenção'],['injecao','Carro/Manutenção'],['atacad','Supermercado'],['supermerc','Supermercado'],['mercado','Supermercado'],['açougue','Carne'],['acougue','Carne'],['ifood','Ifood/Delivery'],['rappi','Ifood/Delivery'],['posto ','Gasolina'],['shell','Gasolina'],['ipiranga','Gasolina'],['drogaria','Remédios'],['farmac','Remédios'],['droga','Remédios'],['netflix','Assinaturas'],['spotify','Assinaturas'],['disney','Assinaturas'],['amazon prime','Assinaturas'],['uber','Transporte'],['99 ','Transporte'],['pet','Ração/Banho Selena'],['enel','Energia/Água'],['equatorial','Energia/Água'],['saneago','Energia/Água'],['claro','Celular'],['vivo','Celular'],['tim ','Celular']]
 };
@@ -346,7 +346,7 @@ function parseBoleto(raw){
     var bc=d;if(d.length===48){bc='';for(var i=0;i<4;i++)bc+=d.slice(i*12,i*12+11)}
     r.ok=true;r.tipo='Conta de consumo / tributo';r.info=SEG[bc[1]]||'Convênio';
     if(bc[2]==='6'||bc[2]==='8')r.valor=+bc.slice(4,15)/100;
-    if(bc[1]==='2'||bc[1]==='3')r.cat='Energia/Água';else if(bc[1]==='4')r.cat='Internet';else if(bc[1]==='1')r.cat='IPTU';
+    if(bc[1]==='2')r.cat='Água';else if(bc[1]==='3')r.cat='Energia';else if(bc[1]==='4')r.cat='Internet';else if(bc[1]==='1')r.cat='IPTU';
   }
   if(r.valor===0)r.valor=null;
   return r;
@@ -414,6 +414,13 @@ function lancarAuto(r){
 window.lancarAuto=function(r){return lancarAuto(r)};
 function ajustesUnicos(){ // correções pontuais, cada uma entra uma vez só (id fixo)
   var A=[{ym:'2026-12',it:{id:'ajuste-centavos-nc-2026-12',desc:'Ajuste de centavos (igual ao app do Nubank)',valor:0.02,tipo:'despesa',cat:'Taxas',fonte:'Nubank Casal',pessoa:'Casal',data:'2026-11-30',pago:false,fixa:false,orig:'fatura'}}];
+  Object.keys(S.months).filter(function(k){return k>=INICIO}).forEach(function(k){
+    var L=monthLanc(k);if(!L.some(function(x){return x.desc==='Energia/Água'}))return;
+    var N=[],ids={};L.forEach(function(x){ids[x.id]=1});L.forEach(function(x){if(x.desc!=='Energia/Água'){N.push(x);return}if(ids[x.id+'-agua'])return;
+      var ag=Math.min(86.08,+x.valor||0),en=Math.round(((+x.valor||0)-ag)*100)/100;
+      N.push(Object.assign({},x,{id:x.id+'-agua',desc:'Água',cat:'Água',valor:ag}));
+      N.push(Object.assign({},x,{id:x.id+'-energia',desc:'Energia',cat:'Energia',valor:en}))});
+    var vis={};N=N.filter(function(x){if(vis[x.id])return false;vis[x.id]=1;return true});setMonth(k,N)});
   A.forEach(function(a){var L=monthLanc(a.ym);if(!L.length||L.some(function(x){return x.id===a.it.id}))return;if(!L.some(function(x){return x.orig==='fatura'&&x.fonte===a.it.fonte}))return;setMonth(a.ym,L.concat([a.it]))});
 }
 function processaAuto(){ajustesUnicos();if(AUTO_PEND){var r=AUTO_PEND;AUTO_PEND=null;if(lancarAuto(r)){S.tab='inicio';render()}}}
@@ -545,7 +552,7 @@ function vInicio(root){
     else linhas.push({item:x,valor:+x.valor||0});
   });
   // mesma ordem da planilha; o que não estiver nela vem depois, do maior para o menor
-  var ORD=['Energia/Água','Supermercado','Carne','Internet','Ração/Banho Selena','Financiamento','Seguro','#Nubank Casal','#Nubank Isabella','#Inter Alexandre','Celular','#Banco do Brasil Isabella','IA','Agnes','Contador','Ifood/Delivery','Gastos extras'];
+  var ORD=['Energia','Água','Energia/Água','Supermercado','Carne','Internet','Ração/Banho Selena','Financiamento','Seguro','#Nubank Casal','#Nubank Isabella','#Inter Alexandre','Celular','#Banco do Brasil Isabella','IA','Agnes','Contador','Ifood/Delivery','Gastos extras'];
   function chave(l){var k=l.grupo?'#'+l.grupo:(l.item.cat==='Fatura cartão'?'#'+l.item.fonte:l.item.cat);var i=ORD.indexOf(k);return i<0?99:i}
   linhas.sort(function(a,b){return (chave(a)-chave(b))||(b.valor-a.valor)});
   var cc=h('div',{class:'card'},h('h3',null,'Contas de '+mesNome.toLowerCase(),h('span',{style:'font-weight:700;color:var(--tx)'},brl(c.D))));
