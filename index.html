@@ -155,7 +155,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.6';
+const APP_VERSION = 'v2026.11.23.7';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1087,7 +1087,7 @@ function initFirebase(){
       window.location.replace(location.pathname+'?v='+encodeURIComponent(nova)+location.hash)})();
   }
   function verificar(){
-    if(verificando||recarregando||!navigator.onLine)return;verificando=true;
+    if(verificando||recarregando||!navigator.onLine||typeof fetch!=='function')return;verificando=true;
     fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(txt){
       var m=txt&&txt.match(/const APP_VERSION = '([^']+)'/);
       if(!m||m[1]===APP_VERSION){try{sessionStorage.removeItem('cc-tentou')}catch(e){}return}
