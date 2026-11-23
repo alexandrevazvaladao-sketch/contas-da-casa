@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.9';
+const APP_VERSION = 'v2026.11.23.10';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -174,7 +174,8 @@ var DEF={
   divisao:'igual',metas:{},
   regras:[['juliana step','Agnes'],['leonardo jos','Casa'],['artthur','Casa'],['agorasoumae','Enxoval'],['ifood club','Ifood/Delivery'],['estorno de ifood','Ifood/Delivery'],['ifood','Ifood/Delivery'],['99food','Ifood/Delivery'],['max supermercado','Supermercado'],['super vi','Supermercado'],['contaja','Contador'],['petz','Ração/Banho Selena'],['hinova','Seguro'],['anthropic','IA'],['the fiber','Internet'],['decolar','Viagem'],['shopee','Compras online'],['mercadol','Compras online'],['amazon','Compras online'],['olx','Compras online'],['iof','Taxas'],['desconto antecip','Taxas'],['otica','Saúde'],['medicina','Saúde'],['restaurante','Restaurante/Lazer'],['sorvet','Restaurante/Lazer'],['lanches','Restaurante/Lazer'],['autoglass','Carro/Manutenção'],['borracha','Carro/Manutenção'],['injecao','Carro/Manutenção'],['atacad','Supermercado'],['supermerc','Supermercado'],['mercado','Supermercado'],['açougue','Carne'],['acougue','Carne'],['ifood','Ifood/Delivery'],['rappi','Ifood/Delivery'],['posto ','Gasolina'],['shell','Gasolina'],['ipiranga','Gasolina'],['drogaria','Remédios'],['farmac','Remédios'],['droga','Remédios'],['netflix','Assinaturas'],['spotify','Assinaturas'],['disney','Assinaturas'],['amazon prime','Assinaturas'],['uber','Transporte'],['99 ','Transporte'],['pet','Ração/Banho Selena'],['enel','Energia/Água'],['equatorial','Energia/Água'],['saneago','Energia/Água'],['claro','Celular'],['vivo','Celular'],['tim ','Celular']]
 };
-var S={config:JSON.parse(JSON.stringify(DEF)),months:{},parcelas:[],ym:ymNow(),tab:'inicio',sub:'',hide:false,filtro:{tipo:'',fonte:'',pessoa:'',q:''},bol:{text:'',rows:[]},fat:{text:'',rows:[],fonte:'',pessoa:'',invert:false,replace:true},loaded:false,last:{},
+var INICIO='2026-12';
+var S={config:JSON.parse(JSON.stringify(DEF)),months:{},parcelas:[],ym:(ymNow()<'2026-12'?'2026-12':ymNow()),tab:'inicio',sub:'',hide:false,filtro:{tipo:'',fonte:'',pessoa:'',q:''},bol:{text:'',rows:[]},fat:{text:'',rows:[],fonte:'',pessoa:'',invert:false,replace:true},loaded:false,last:{},
   me:null,owner:false,membros:null,pedidos:[],meuPedido:false,names:{},gateReady:false,booting:true,merc:{itens:[],limite:0,upd:0},entry:'',qtd:1,nota:null,lendoNota:false};
 var db=null,wq={},userApi=null,mcp=null,sampleApi=null,sampleImg=false;
 var FBMODE=!!(window.firebase&&window.FB_CONFIG),fbAuth=null;
@@ -329,8 +330,8 @@ function readFatura(text){
 var TABS=[['inicio','🏠','Início'],['mercado','🛒','Mercado'],['+','',''],['pagar','📅','A pagar'],['mais','☰','Mais']];
 function desenhaMeses(){
   var el=$('#mstrip');if(!el)return;
-  var ini=ymAdd(S.ym,-6),fim=ymAdd(S.ym,6),hoje=ymNow();
-  Object.keys(S.months).forEach(function(k){if(k<ini&&ymDiff(k,S.ym)<=12)ini=k});
+  var hoje=ymNow(),ini=INICIO,fim=ymAdd(S.ym>hoje?S.ym:hoje,12);
+  if(S.ym<ini){S.ym=ini}
   if(el._key===ini+'|'+S.ym)return;el._key=ini+'|'+S.ym;el.replaceChildren();
   var sel=null;
   for(var m=ini;m<=fim;m=ymAdd(m,1)){(function(m){var p=m.split('-');
