@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.20';
+const APP_VERSION = 'v2026.11.23.21';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -251,6 +251,49 @@ function virtuais(ym){
     .map(function(x){return Object.assign({},x,{id:'v'+ym+x.id,virt:true,prev:x.tipo!=='receita',pago:false,venc:''})});
 }
 function materializa(ym){var V=virtuais(ym);if(!V.length)return {};var mapa={},novos=V.map(function(x){var y=Object.assign({},x,{id:uid(),orig:'previsao'});delete y.virt;mapa[x.id]=y.id;return y});setMonth(ym,monthLanc(ym).concat(novos));return mapa}
+/* ---------- guardado (reserva) ----------
+   S.config.guardado = valor guardado antes de dezembro/2026 (informado por vocês).
+   Investimentos lançados nos meses entram no guardado. Acumulado do caixa começa em INICIO. */
+function guardadoBase(){return +((S.config.guardado||{}).valor)||0}
+function acumulados(ym){ // até o fim do mês ym
+  var sem=0,com=guardadoBase(),I=0;
+  for(var m=INICIO;m<=ym;m=ymAdd(m,1)){var c=calc(m);sem+=c.saldo-c.I;com+=c.saldo;I+=c.I}
+  return {sem:sem,com:com,guardado:guardadoBase()+I};
+}
+function linhasAcum(ym,claro){
+  var a=acumulados(ym),st=claro?'':'color:inherit';
+  return h('div',{style:'margin-top:8px;display:flex;flex-direction:column;gap:2px'},
+    h('div',{class:'cmp',style:'display:flex;justify-content:space-between'},h('span',null,'Acumulado sem o guardado'),h('b',{style:a.sem<0?'color:#ff9a9a':''},brl(a.sem))),
+    h('div',{class:'cmp',style:'display:flex;justify-content:space-between'},h('span',null,'Com o guardado ('+brl(a.guardado)+')'),h('b',{style:a.com<0?'color:#ff9a9a':''},brl(a.com))));
+}
+function vGuardado(root){
+  var G=guardadoBase(),a=acumulados(S.ym);
+  root.append(h('div',{class:'hero',style:'cursor:pointer',onclick:editaGuardado},
+    h('small',null,'🐷 Guardado de vocês · toque para mudar'),
+    h('div',{class:'big'},brl(a.guardado)),
+    h('div',{class:'cmp'},G?'Reserva informada '+brl(G)+((a.guardado-G)?' + investimentos lançados '+brl(a.guardado-G):''):'Toque aqui e informe quanto vocês têm guardado hoje.'),
+    linhasAcum(S.ym,true)));
+  var cp=h('div',{class:'card'},h('h3',null,'Mês a mês'),h('div',{class:'hint',style:'margin:-4px 0 6px'},'Sem o guardado: só o caixa do mês somado. Com o guardado: o caixa somado + a reserva.'));
+  for(var m=INICIO,i=0;i<14;m=ymAdd(m,1),i++){(function(m){var c=calc(m),x=acumulados(m),p=m.split('-');
+    cp.append(h('div',{class:'row',style:'cursor:pointer;min-height:52px;padding:6px 0',onclick:function(){S.ym=m;S.tab='inicio';vib();render();scrollTo(0,0)}},
+      h('div',{class:'grow'},h('div',{class:'t'},MESES[+p[1]-1]+' '+p[0]+(m===S.ym?' ◀':'')),h('div',{class:'s'},'saldo do mês '+brl(c.saldo))),
+      h('div',{style:'text-align:right;font-size:13px'},
+        h('div',null,'sem: ',h('b',{class:signCls(x.sem)},brl(x.sem))),
+        h('div',null,'com: ',h('b',{class:signCls(x.com)},brl(x.com))))))})(m)}
+  root.append(cp);
+  root.append(h('div',{class:'acts'},
+    h('button',{class:'b sec',onclick:function(){openForm({tipo:'investimento',cat:'Reserva de emergência',pessoa:'Casal'},true)}},'＋ Guardar dinheiro'),
+    h('button',{class:'b sec',onclick:editaGuardado},'Atualizar valor')));
+}
+function editaGuardado(){
+  var g=S.config.guardado||{};
+  var fV=h('input',{type:'text',inputmode:'decimal',value:g.valor?String(g.valor).replace('.',','):'',placeholder:'0,00',autocomplete:'off'});
+  sheet([h('h2',null,'Quanto vocês têm guardado?'),
+    h('div',{class:'hint'},'Some poupança, investimentos e reserva dos dois, como estava antes de dezembro. Os investimentos lançados no app a partir de dezembro somam sozinhos.'),
+    h('div',{class:'amt'},h('span',null,'R$'),fV),
+    h('div',{class:'foot'},h('button',{class:'b',onclick:function(){S.config.guardado={valor:parseVal(fV.value),em:today()};saveConfig();closeSheet();toast('Guardado atualizado.');render()}},'Salvar'))]);
+  setTimeout(function(){try{fV.focus();fV.select()}catch(e){}},250);
+}
 function calc(ym){
   var L=monthLanc(ym).concat(virtuais(ym));
   var imp={};L.forEach(function(x){if(x.orig==='fatura')imp[x.fonte]=1});
@@ -342,7 +385,7 @@ function readFatura(text){
 }
 
 /* ---------- shell ---------- */
-var TABS=[['inicio','🏠','Início'],['mercado','🛒','Mercado'],['+','',''],['pagar','📅','A pagar'],['mais','☰','Mais']];
+var TABS=[['inicio','🏠','Início'],['mercado','🛒','Mercado'],['+','',''],['guardado','🐷','Guardado'],['mais','☰','Mais']];
 function desenhaMeses(){
   var el=$('#mstrip');if(!el)return;
   var hoje=ymNow(),ini=INICIO,fim=ymAdd(S.ym>hoje?S.ym:hoje,12);
@@ -398,7 +441,7 @@ function render(){
   var ok=liberado();$('.tabbar').style.display=ok?'':'none';$('#mstrip').style.display=ok?'':'none';
   if(!ok){vLock(root);return}
   if(S.pendNovo){S.pendNovo=false;setTimeout(function(){openForm(null)},50)}
-  var fn={inicio:vInicio,extrato:vExtrato,pagar:vPagar,mais:vMais,mercado:vMercado}[S.tab];
+  var fn={inicio:vInicio,extrato:vExtrato,pagar:vPagar,mais:vMais,mercado:vMercado,guardado:vGuardado}[S.tab];
   if(S.tab==='mais'&&S.sub)fn={parcelas:vParc,fatura:vFat,boletos:vBol,ajustes:vCfg,pessoas:vPessoas,exportar:vExport}[S.sub]||vMais;
   fn(root);
 }
@@ -427,7 +470,8 @@ function vInicio(root){
     h('div',{class:'two'},
       h('div',null,h('small',null,'↑ Entra'),h('b',null,brl(c.R))),
       h('div',null,h('small',null,'↓ Sai'),h('b',null,brl(c.D)))),
-    c.I>0?h('div',{class:'cmp'},'Investido: '+brl(c.I)+' · ainda sobra '+brl(c.sobra)):null));
+    c.I>0?h('div',{class:'cmp'},'Guardado neste mês: '+brl(c.I)):null,
+    linhasAcum(S.ym,true)));
   if(S.owner&&S.pedidos.length)root.append(cardPedidos());
   root.append(h('button',{class:'b full',style:'margin:0 0 12px;font-size:17px;padding:15px',onclick:function(){openForm(null)}},'＋ Lançar conta ou gasto'));
   // contas do mês, uma linha por conta (como na planilha)
@@ -476,11 +520,10 @@ function vInicio(root){
 function cardPrevisao(){
   var cp=h('div',{class:'card'},h('h3',null,'Próximos meses'),h('div',{class:'hint',style:'margin:-4px 0 6px'},'Previsto com base na planilha: contas, salários e parcelas. Toque num mês para ver.'));
   var ac=calc(S.ym).saldo;
-  cp.append(h('div',{class:'s',style:'margin-bottom:4px'},'Começando com o saldo de '+MESES[+S.ym.split('-')[1]-1].toLowerCase()+': '+brl(ac)));
   for(var i=1;i<=12;i++){(function(m){var c=calc(m);ac+=c.saldo;var p=m.split('-');
     cp.append(h('div',{class:'row',style:'cursor:pointer;min-height:46px;padding:6px 0',onclick:function(){S.ym=m;vib();render();scrollTo(0,0)}},
       h('div',{class:'grow'},h('div',{class:'t'},MESES[+p[1]-1]+' '+p[0]),h('div',{class:'s'},'entra '+brl(c.R)+' · sai '+brl(c.D))),
-      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(c.saldo)},brl(c.saldo)),h('div',{class:'s',style:'font-size:12px;color:'+(ac<0?'var(--bad)':'inherit')},'acumulado '+brl(ac)))))})(ymAdd(S.ym,i))}
+      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(c.saldo)},brl(c.saldo)),h('div',{class:'s',style:'font-size:12px'},'sem guardado ',h('b',{class:signCls(acumulados(m).sem)},brl(acumulados(m).sem))),h('div',{class:'s',style:'font-size:12px'},'com guardado ',h('b',{class:signCls(acumulados(m).com)},brl(acumulados(m).com))))))})(ymAdd(S.ym,i))}
   return cp;
 }
 /* Toque numa conta: muda só o valor (e se está paga), sem formulário grande. */
@@ -623,9 +666,9 @@ function criarLembretes(list){
 
 /* ---------- Mais ---------- */
 function vMais(root){
-  var items=[['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
+  var items=[['📅','A pagar','Contas do mês que ainda faltam pagar','__pagar'],['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
   var cd=h('div',{class:'card menu',style:'padding:2px 12px'});
-  items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
+  items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
   root.append(cd);
   root.append(h('div',{class:'hint',style:'text-align:center'},'Dica: deslize para os lados na tela para trocar de mês.'));
 }
