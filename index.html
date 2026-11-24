@@ -163,7 +163,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.2';
+const APP_VERSION = 'v2026.11.24.3';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1446,6 +1446,7 @@ function init(){
   }).catch(function(){db=null;loadLocal();S.loaded=true;render()});
 }
 var subsOff=[];
+window.addEventListener('online',function(){S.offline=false;try{updateHeader()}catch(e){}});window.addEventListener('offline',function(){S.offline=true;try{updateHeader()}catch(e){}});
 function startSubs(){
   subsOff.forEach(function(f){try{f()}catch(e){}});subsOff=[];
   var lim=setTimeout(function(){if(!S.loaded)toast('Demorando para conectar. Os dados podem estar desatualizados.')},10000);
@@ -1455,7 +1456,7 @@ function startSubs(){
     else if((S.merc.upd||0)>(r.upd||0)&&!s.metadata.hasPendingWrites)save('mercado/atual',S.merc)},function(){}));
   subsOff.push(db.collection('inbox').onSnapshot(function(q){if(!S.loaded)return;q.docs.forEach(function(d){var r=d.data()||{};if(lancarAuto({valor:r.valor,desc:r.desc,cartao:r.cartao,quando:r.quando,id:'i'+d.id}))try{db.doc('inbox/'+d.id).delete()}catch(e){}})},function(){}));
   subsOff.push(db.doc('casa/parcelas').onSnapshot(function(s){S.parcelas=s.exists?(s.data().itens||[]):[];softRender()},function(){}));
-  subsOff.push(db.collection('meses').onSnapshot(function(q){var m={};q.docs.forEach(function(d){m[d.id]=d.data()});S.months=m;S.offline=!!q.metadata.fromCache;if(!q.metadata.fromCache)done();softRender()},function(){done()}));
+  subsOff.push(db.collection('meses').onSnapshot({includeMetadataChanges:true},function(q){var m={};q.docs.forEach(function(d){m[d.id]=d.data()});S.months=m;S.offline=!!q.metadata.fromCache&&!navigator.onLine;if(!q.metadata.fromCache)done();softRender()},function(){done()}));
 }
 /* ---------- Firebase ---------- */
 function fsWrap(fs){
