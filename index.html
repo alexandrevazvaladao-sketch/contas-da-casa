@@ -189,7 +189,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.6';
+const APP_VERSION = 'v2026.11.24.7';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -749,15 +749,21 @@ function gastoLivreHoje(){
     if(!c)return;gasto+=+x.valor||0;if(x.data===hoje)gHoje+=+x.valor||0})});
   var p=mesCal.split('-').map(Number),ult=new Date(p[0],p[1],0).getDate(),dia=+hoje.slice(8),faltam=ult-dia+1;
   var resta=orc-(gasto-gHoje),porDia=resta/faltam;
-  return {orc:orc,gasto:gasto,resta:orc-gasto,porDia:porDia,hojeGasto:gHoje,podeHoje:porDia-gHoje,faltam:faltam,ult:ult,mes:mesCal};
+  // o que se compra hoje no cartão cai na fatura de um mês: se esse mês já fecha negativo (mesmo com o guardado), não sobra nada para gastar
+  var F=S.config.fontes||[],cart=(S.last&&ehCartao(S.last.fonte)&&S.last.fonte)||F.filter(function(f){return /nubank.*casal/i.test(f)})[0]||F.filter(ehCartao)[0];
+  var mPag=cart?mesDaFatura(cart,hoje):mesCal;if(mPag<INICIO)mPag=INICIO;
+  var fx=fluxo(mPag),livreMes=Math.max(0,fx.com);
+  var pode=Math.min(porDia-gHoje,livreMes);
+  return {orc:orc,gasto:gasto,resta:orc-gasto,porDia:porDia,hojeGasto:gHoje,podeHoje:pode,faltam:faltam,ult:ult,mes:mesCal,mPag:mPag,comPag:fx.com};
 }
 function cardGastoHoje(){
   var g=gastoLivreHoje();if(!g)return null;
-  var ok=g.podeHoje>=0,cor=g.resta<0?'var(--bad)':(ok?'var(--ok)':'#e0a019');
+  var ok=g.podeHoje>=0,cor=(g.resta<0||g.comPag<0)?'var(--bad)':(ok?'var(--ok)':'#e0a019');
   return h('div',{class:'card',style:'cursor:pointer',onclick:function(){S.tab='inicio';render();setTimeout(function(){var el=document.getElementById('metas-card');if(el)el.scrollIntoView({behavior:'smooth'})},50)}},
     h('h3',null,'💸 Hoje dá para gastar',h('span',{style:'font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0'},'até '+g.ult+'/'+g.mes.slice(5))),
-    h('div',{style:'font-size:30px;font-weight:800;color:'+cor},g.resta<0?brl(0):brl(Math.max(0,g.podeHoje))),
-    h('div',{class:'s',style:'color:var(--mut);font-size:13px;margin-top:2px'},
+    h('div',{style:'font-size:30px;font-weight:800;color:'+(g.comPag<0?'var(--bad)':cor)},(g.resta<0||g.comPag<0)?brl(0):brl(Math.max(0,g.podeHoje))),
+    h('div',{class:'s',style:'color:var(--mut);font-size:13px;margin-top:2px;white-space:normal'},
+      g.comPag<0?'O que vocês gastam agora cai na conta de '+MESES[+g.mPag.split('-')[1]-1].toLowerCase()+', que já vai fechar em '+brl(g.comPag)+' (contando o guardado). Qualquer gasto aumenta o buraco: só o essencial.':
       g.resta<0?'As metas do mês já estouraram '+brl(-g.resta)+'. Segure o que der até o fim do mês.':
       (g.hojeGasto>0?'Hoje já foi '+brl(g.hojeGasto)+' · ':'')+'Resta '+brl(g.resta)+' das metas ('+brl(g.orc)+') para '+g.faltam+(g.faltam===1?' dia':' dias')+'. Mercado, comer fora, delivery e extras.'));
 }
