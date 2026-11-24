@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#16233d">
+<script>(function(){var t="escuro";try{t=JSON.parse(localStorage.getItem("cc-tema"))||"escuro"}catch(e){}document.documentElement.setAttribute("data-tema",t);if(t==="escuro")document.querySelector('meta[name="theme-color"]').setAttribute("content","#000000")})()</script>
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Contas da Casa</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -23,8 +24,29 @@ window.FB_CONFIG={apiKey:'AIzaSyAqadP1evXE28tUOT5fvst61YJCKpH4cRQ',authDomain:'c
 </script>
 <style>
 :root{--navy:#16233d;--navy2:#22365f;--bg:#f2f4f8;--card:#fff;--tx:#18202e;--mut:#6b7689;--line:#e4e8f0;--ok:#12865a;--bad:#d13d3d;--acc:#3b6cf0;--chip:#eef1f7;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root{--bg:#0e1420;--card:#172033;--tx:#e8edf6;--mut:#93a0b6;--line:#263149;--chip:#222d44;--ok:#3ccf8e;--bad:#ff6b6b}}
+@media(prefers-color-scheme:dark){:root[data-tema="auto"]{--bg:#0e1420;--card:#172033;--tx:#e8edf6;--mut:#93a0b6;--line:#263149;--chip:#222d44;--ok:#3ccf8e;--bad:#ff6b6b}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* ---------- Tema escuro (estilo Nubank): fundo preto, cartões cinza-escuro, roxo de destaque ---------- */
+:root[data-tema="escuro"]{--navy:#000;--navy2:#1f1f22;--bg:#000;--card:#161618;--tx:#f4f4f5;--mut:#a1a1aa;--line:#2a2a2e;--chip:#232326;--ok:#5ee08f;--bad:#ff6b6b;--acc:#8a2be2;color-scheme:dark}
+:root[data-tema="escuro"] header{background:#000}
+:root[data-tema="escuro"] .mstrip button{border-color:#3a3a40;color:#d4d4d8}
+:root[data-tema="escuro"] .mstrip button.on{background:#2a0b45;color:#c9a4ff;border:2px solid #8a2be2}
+:root[data-tema="escuro"] .mstrip button.hoje:not(.on){border-color:#6d28d9}
+:root[data-tema="escuro"] .hero{background:#161618;border:1px solid #2a2a2e}
+:root[data-tema="escuro"] .hero .two>div{background:#232326}
+:root[data-tema="escuro"] .card{border-color:#202024}
+:root[data-tema="escuro"] .card h3 a,:root[data-tema="escuro"] a{color:#c084fc}
+:root[data-tema="escuro"] .b{background:#8a2be2;border-radius:999px}
+:root[data-tema="escuro"] .b.sec{background:#232326;color:#f4f4f5}
+:root[data-tema="escuro"] .b.red{background:#c0392b}
+:root[data-tema="escuro"] .chip.on{background:#8a2be2;border-color:#8a2be2}
+:root[data-tema="escuro"] .tag{background:#2a0b45;color:#d8b4fe}
+:root[data-tema="escuro"] .tag.w{background:#3a2a0a;color:#fbbf24}:root[data-tema="escuro"] .tag.g{background:#0b2e1e;color:#5ee08f}
+:root[data-tema="escuro"] .tabbar{background:#0b0b0c;border-top-color:#1f1f22}
+:root[data-tema="escuro"] .tabbar button.on{color:#c084fc}
+:root[data-tema="escuro"] .tabbar .fab{background:#8a2be2;box-shadow:0 6px 16px rgba(138,43,226,.45)}
+:root[data-tema="escuro"] .sheet{background:rgba(0,0,0,.7)}
+:root[data-tema="escuro"] .ic{filter:saturate(.9)}
 html,body{margin:0;overscroll-behavior-y:none;touch-action:manipulation}
 button,a,label,.chip,.row{touch-action:manipulation}
 body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.4}
@@ -167,7 +189,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.4';
+const APP_VERSION = 'v2026.11.24.5';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -529,7 +551,8 @@ function fixGuardadoDez(){
   if(K.length!==L.length)setMonth('2026-12',K);
   S.config.guardado={valor:144,em:today()};S.config.migracoes=mg.concat(['guardado-144-dez']);saveConfig();
 }
-function processaAuto(){ajustesUnicos();fixGuardadoDez();if(AUTO_PEND){var r=AUTO_PEND;AUTO_PEND=null;if(lancarAuto(r)){S.tab='inicio';render()}}}
+function vencNubank(){var mg=S.config.migracoes||[];if(mg.indexOf('venc-nubank-casal-8')>=0)return;var vd=Object.assign({},S.config.vencDia||{});if(!vd['fatura:Nubank Casal'])vd['fatura:Nubank Casal']=8;S.config.vencDia=vd;S.config.migracoes=mg.concat(['venc-nubank-casal-8']);saveConfig()}
+function processaAuto(){ajustesUnicos();fixGuardadoDez();vencNubank();if(AUTO_PEND){var r=AUTO_PEND;AUTO_PEND=null;if(lancarAuto(r)){S.tab='inicio';render()}}}
 
 /* ---------- csv ---------- */
 function parseCSV(t){
@@ -912,6 +935,10 @@ function criarLembretes(list){
 
 /* ---------- Mais ---------- */
 function vMais(root){
+  var tema=document.documentElement.getAttribute('data-tema')||'escuro';
+  root.append(h('div',{class:'card',style:'padding:12px 14px'},h('h3',null,'🎨 Aparência'),
+    chips([['escuro','🌙 Escuro'],['claro','☀️ Claro'],['auto','📱 Igual ao celular']],tema,function(v){pref('tema',v);document.documentElement.setAttribute('data-tema',v);try{document.querySelector('meta[name="theme-color"]').setAttribute('content',v==='escuro'?'#000000':'#16233d')}catch(e){}render()}),
+    h('div',{class:'hint',style:'margin:-6px 0 0'},'Vale só para este celular.')));
   var items=[['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
   var cd=h('div',{class:'card menu',style:'padding:2px 12px'});
   items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
