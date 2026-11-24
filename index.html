@@ -45,6 +45,10 @@ header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:5;padding
 .mstrip button small{display:block;font-size:10px;font-weight:600;opacity:.7;line-height:1}
 .sync{font-size:11px;opacity:.7}
 main{max-width:720px;margin:0 auto;padding:12px 12px calc(96px + var(--sab))}
+/* a página sempre ocupa a tela toda: no iPhone, telas curtas (como o menu) faziam a barra de baixo subir */
+html{background:var(--bg);min-height:100%}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+main{flex:1 0 auto;width:100%;box-sizing:border-box}
 .hero{background:linear-gradient(135deg,#1d3263,#2f55b8);color:#fff;border-radius:18px;padding:16px;margin-bottom:12px}
 .hero small{opacity:.8;font-size:12px}
 .hero .big{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:2px 0 10px}
@@ -163,7 +167,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.3';
+const APP_VERSION = 'v2026.11.24.4';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
