@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.30';
+const APP_VERSION = 'v2026.11.23.32';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -278,6 +278,46 @@ function linhaGuardado(ym){
   var f=fluxo(ym);
   return h('div',{class:'cmp',style:'display:flex;justify-content:space-between;margin-top:8px;font-size:15px'},
     h('span',null,'Com o guardado ('+brl(f.G)+')'),h('b',{style:f.com<0?'color:#ff9a9a':'color:#9af0b8'},brl(f.com)));
+}
+/* ---------- Ajustar para não ficar negativo ----------
+   Mostra os gastos que dá para mexer (previstos) e sugere cortes até o mês fechar no zero
+   contando o guardado. Ordem: o que dói menos primeiro, respeitando um mínimo realista. */
+var AJUSTE=[['Restaurante/Lazer',50],['Ifood/Delivery',50],['IA',0],['Gastos extras',150],['Compras online',0],['Fatura cartão',800],['Supermercado',900],['Carne',100],['Energia',450]];
+function ajustaveis(ym){
+  var ord={};AJUSTE.forEach(function(a,i){ord[a[0]]=i});
+  return calc(ym).all.filter(function(x){return x.prev&&x.tipo==='despesa'&&ord[x.cat]!=null&&(+x.valor||0)>=20&&(x.cat!=='Fatura cartão'||!S.parcelas.some(function(p){return p.fonte===x.fonte}))})
+    .sort(function(a,b){return ord[a.cat]-ord[b.cat]});
+}
+function sugereCortes(ym,falta){ // divide o corte entre todos, proporcional ao que cada um ainda pode baixar
+  var piso={};AJUSTE.forEach(function(a){piso[a[0]]=a[1]});
+  var L=ajustaveis(ym).map(function(x){var base=Math.round((+x.valor+(+x.usado||0))*100)/100;return {x:x,base:base,pode:Math.max(0,base-Math.max(piso[x.cat]||0,+x.usado||0))}});
+  var tot=L.reduce(function(a,r){return a+r.pode},0),fr=tot>0?Math.min(1,falta/tot):0,cortado=0;
+  L.forEach(function(r){var c=Math.min(r.pode,Math.ceil(r.pode*fr/10)*10);r.novo=Math.round((r.base-c)*100)/100;cortado+=c});
+  return L;
+}
+function abreAjuste(ym){
+  var f=fluxo(ym),falta=Math.max(0,-f.com),mes=MESES[+ym.split('-')[1]-1].toLowerCase(),L=sugereCortes(ym,falta);
+  if(!L.length){toast('Não há gastos previstos para ajustar neste mês.');return}
+  var info=h('div',{class:'hint',style:'font-size:15px;margin:6px 0 10px'}),inps=[];
+  var lista=h('div',null);
+  L.forEach(function(r){var nome=(r.x.cat==='Fatura cartão'&&r.x.fonte)?r.x.fonte:(r.x.desc||r.x.cat).replace(/ \(previsto\)$/,'');
+    var inp=h('input',{type:'text',inputmode:'decimal',value:String(r.novo).replace('.',','),style:'width:110px;text-align:right;font-size:17px'});inp.oninput=calcula;inps.push(inp);
+    lista.append(h('div',{class:'row',style:'min-height:52px'},h('div',{class:'ic',style:'background:var(--chip)'},r.x.cat==='Fatura cartão'?'💳':icon(r.x.cat)),h('div',{class:'grow'},h('div',{class:'t'},nome),h('div',{class:'s'},'hoje '+brlRaw(r.base))),inp))});
+  function calcula(){var corte=0;L.forEach(function(r,i){corte+=r.base-parseVal(inps[i].value)});var fica=f.com+corte;
+    info.innerHTML='';info.append(h('div',null,'Cortando ',h('b',null,brlRaw(corte)),', '+mes+' fica com ',h('b',{style:'color:'+(fica<-0.5?'var(--bad)':'var(--ok)')},brlRaw(fica)),' contando o guardado.'))}
+  calcula();
+  var fProx=h('input',{type:'checkbox'});fProx.checked=true;
+  sheet([h('h2',null,'✂️ Ajustar '+mes),
+    h('div',{class:'hint'},falta>0?'Hoje '+mes+' fica '+brlRaw(f.com)+'. Sugeri cortes começando pelo que dói menos; mude os valores como quiser.':mes.charAt(0).toUpperCase()+mes.slice(1)+' já fecha positivo. Se quiser, ajuste para sobrar mais.'),
+    info,lista,
+    h('label',{class:'chk',style:'padding:8px 0'},fProx,'Manter esses valores nos meses seguintes'),
+    h('div',{class:'foot'},h('button',{class:'b',onclick:function(){
+      var temV=L.some(function(r){return r.x.virt}),mp=temV?materializa(ym):{};
+      var novos={};L.forEach(function(r,i){var id=r.x.virt?mp[r.x.id]:r.x.id;novos[id]={v:parseVal(inps[i].value),desc:r.x.desc}});
+      setMonth(ym,monthLanc(ym).map(function(y){return novos[y.id]?Object.assign({},y,{valor:novos[y.id].v}):y}));
+      if(fProx.checked){var porDesc={};Object.keys(novos).forEach(function(id){porDesc[novos[id].desc]=novos[id].v});
+        Object.keys(S.months).filter(function(k){return k>ym}).forEach(function(k){var L2=monthLanc(k),mud=false;L2=L2.map(function(y){if(y.prev&&porDesc[y.desc]!=null&&y.valor!==porDesc[y.desc]){mud=true;return Object.assign({},y,{valor:porDesc[y.desc]})}return y});if(mud)setMonth(k,L2)})}
+      vib();closeSheet();toast('Ajustado.');render()}},'Aplicar'))]);
 }
 function idGuardar(ym){return 'guardar-'+ym}
 function sugestaoGuardar(ym){ // quanto separar neste mês para o mês seguinte fechar no zero (contando o guardado)
@@ -589,7 +629,8 @@ function vInicio(root){
       h('div',null,h('small',null,'↓ Sai'),h('b',null,brl(c.D)))),
     c.I>0?h('div',{class:'cmp',style:'cursor:pointer;text-decoration:underline dotted',onclick:function(){listaGuardar(S.ym)}},'🐷 Separado para guardar neste mês: '+brl(c.I)+' ✎'):null,
     linhaGuardado(S.ym),
-    botaoGuardarProx(S.ym)));
+    botaoGuardarProx(S.ym),
+    (fluxo(S.ym).com<-0.5&&ajustaveis(S.ym).length)?h('button',{class:'b sec full',style:'margin-top:10px;background:#fff;color:#c0392b;border:0;font-weight:700',onclick:function(){abreAjuste(S.ym)}},'✂️ Ajustar gastos para não ficar negativo'):null));
   if(S.owner&&S.pedidos.length)root.append(cardPedidos());
   root.append(h('button',{class:'b full',style:'margin:0 0 12px;font-size:17px;padding:15px',onclick:function(){openForm(null)}},'＋ Lançar conta ou gasto'));
   // contas do mês, uma linha por conta (como na planilha)
@@ -647,7 +688,7 @@ function cardPrevisao(){
   for(var i=1;i<=12;i++){(function(m){var x=fluxo(m),c=x.c,p=m.split('-');
     cp.append(h('div',{class:'row',style:'cursor:pointer;min-height:50px;padding:6px 0',onclick:function(){S.ym=m;vib();render();scrollTo(0,0)}},
       h('div',{class:'grow'},h('div',{class:'t'},MESES[+p[1]-1]+' '+p[0]),h('div',{class:'s'},'entra '+brl(c.R)+' · sai '+brl(c.D+c.I))),
-      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(x.res)},brl(x.res)),h('div',{class:'s',style:'font-size:12px'},'com guardado ',h('b',{class:signCls(x.com)},brl(x.com))))))})(ymAdd(S.ym,i))}
+      h('div',{style:'text-align:right'},h('div',{class:'v '+signCls(x.res)},brl(x.res)),h('div',{class:'s',style:'font-size:12px'},(x.com<-0.5?'✂️ ':'')+'com guardado ',h('b',{class:signCls(x.com)},brl(x.com))))))})(ymAdd(S.ym,i))}
   return cp;
 }
 /* Toque numa conta: muda só o valor (e se está paga), sem formulário grande. */
