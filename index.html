@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.29';
+const APP_VERSION = 'v2026.11.23.30';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -279,13 +279,37 @@ function linhaGuardado(ym){
   return h('div',{class:'cmp',style:'display:flex;justify-content:space-between;margin-top:8px;font-size:15px'},
     h('span',null,'Com o guardado ('+brl(f.G)+')'),h('b',{style:f.com<0?'color:#ff9a9a':'color:#9af0b8'},brl(f.com)));
 }
+function idGuardar(ym){return 'guardar-'+ym}
+function sugestaoGuardar(ym){ // quanto separar neste mês para o mês seguinte fechar no zero (contando o guardado)
+  var jaI=sum(calc(ym).all.filter(function(x){return x.tipo==='investimento'&&x.id===idGuardar(ym)})),n=fluxo(ymAdd(ym,1));
+  return Math.max(0,Math.round((jaI-n.com)*100)/100);
+}
+function abreGuardar(ym){
+  var prox=MESES[+ymAdd(ym,1).split('-')[1]-1].toLowerCase(),mes=MESES[+ym.split('-')[1]-1].toLowerCase();
+  var it=monthLanc(ym).filter(function(x){return x.id===idGuardar(ym)})[0],sug=sugestaoGuardar(ym),f=fluxo(ym);
+  var atual=it?+it.valor:0,sobraSem=Math.round((f.res+atual)*100)/100;
+  var fV=h('input',{type:'text',inputmode:'decimal',value:String(it?it.valor:sug).replace('.',','),autocomplete:'off'});
+  var info=h('div',{class:'hint'});
+  function atualiza(){var v=parseVal(fV.value),r=sobraSem-v;info.textContent=(sug>0?'Para '+prox+' não ficar negativo: '+brlRaw(sug)+'. ':prox.charAt(0).toUpperCase()+prox.slice(1)+' já fecha sem precisar guardar. ')+'Separando '+brlRaw(v)+', '+mes+' fica com '+brlRaw(r)+'.'}
+  fV.oninput=atualiza;atualiza();
+  function grava(v){
+    var L=monthLanc(ym).filter(function(x){return x.id!==idGuardar(ym)});
+    if(v>0)L.push({id:idGuardar(ym),desc:'Guardar para '+prox,valor:v,tipo:'investimento',cat:'Reserva de emergência',fonte:'',pessoa:'Casal',data:'',pago:false,fixa:false,orig:'manual'});
+    setMonth(ym,L);vib();closeSheet();toast(v>0?'🐷 Separado '+brlRaw(v)+' para '+prox+'.':'Removido.');render();
+  }
+  sheet([h('h2',null,'🐷 Guardar para '+prox),
+    h('div',{class:'amt'},h('span',null,'R$'),fV),info,
+    sug>0?h('button',{type:'button',class:'b sec full',style:'margin-top:8px',onclick:function(){fV.value=String(sug).replace('.',',');atualiza()}},'Usar o valor que falta ('+brlRaw(sug)+')'):null,
+    h('div',{class:'foot'},
+      it?h('button',{class:'b red',style:'flex:0 0 auto',onclick:function(){grava(0)}},'🗑'):null,
+      h('button',{class:'b',onclick:function(){grava(parseVal(fV.value))}},'Salvar'))]);
+  setTimeout(function(){try{fV.focus();fV.select()}catch(e){}},250);
+}
 function botaoGuardarProx(ym){ // se o mês que vem fica negativo e este sobra, oferece guardar a diferença
   var f=fluxo(ym),n=fluxo(ymAdd(ym,1)),sobra=f.res,falta=-n.com;
   if(!(sobra>=1&&falta>=1))return null;
   var v=Math.round(Math.min(sobra,falta)*100)/100,prox=MESES[+ymAdd(ym,1).split('-')[1]-1].toLowerCase();
-  return h('button',{class:'b sec full',style:'margin-top:10px;background:rgba(255,255,255,.15);color:#fff;border:0',onclick:function(){
-    setMonth(ym,monthLanc(ym).concat([{id:uid(),desc:'Guardar para '+prox,valor:v,tipo:'investimento',cat:'Reserva de emergência',fonte:'',pessoa:'Casal',data:'',pago:false,fixa:false,orig:'manual'}]));
-    vib();toast('Separado '+brlRaw(v)+' para '+prox+'.');render()}},'🐷 Guardar '+brl(v)+' para cobrir '+prox);
+  return h('button',{class:'b sec full',style:'margin-top:10px;background:rgba(255,255,255,.15);color:#fff;border:0',onclick:function(){abreGuardar(ym)}},'🐷 Guardar '+brl(v)+' para cobrir '+prox);
 }
 function vGuardado(root){
   var f=fluxo(S.ym),mes=MESES[+S.ym.split('-')[1]-1].toLowerCase();
@@ -593,6 +617,13 @@ function vInicio(root){
         h('div',{class:'v',style:x.prev?'opacity:.75':''},brl(x.valor))));
     }
   });
+  (function(){var prox=MESES[+ymAdd(S.ym,1).split('-')[1]-1].toLowerCase(),it=monthLanc(S.ym).filter(function(x){return x.id===idGuardar(S.ym)})[0],sug=sugestaoGuardar(S.ym),outros=c.I-(it?+it.valor:0);
+    cc.append(h('div',{class:'row',style:'cursor:pointer;border-top:2px dashed var(--line);margin-top:4px',onclick:function(){abreGuardar(S.ym)}},
+      h('div',{class:'ic',style:'background:#ffe3ec'},'🐷'),
+      h('div',{class:'grow'},h('div',{class:'t'},'Guardar para '+prox),h('div',{class:'s'},it?(sug>+it.valor+0.5?'⚠️ ainda faltam '+brl(sug-it.valor)+' para '+prox:'✓ '+prox+' coberto · toque para mudar'):(sug>0?'sugerido '+brl(sug)+' para '+prox+' não ficar negativo':'não precisa · toque para separar'))),
+      h('div',{class:'v',style:'color:'+(it?'var(--tx)':'var(--mut)')},it?brl(it.valor):(sug>0?brl(sug):'—'))));
+    if(outros>0.009)cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){listaGuardar(S.ym)}},h('div',{class:'ic',style:'background:#ffe3ec'},'🐷'),h('div',{class:'grow'},h('div',{class:'t'},'Outros valores separados'),h('div',{class:'s'},'toque para ver')),h('div',{class:'v'},brl(outros))));
+  })();
   root.append(cc);
   root.append(cardPrevisao());
   // entradas
