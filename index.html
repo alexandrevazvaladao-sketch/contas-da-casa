@@ -161,7 +161,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.23.32';
+const APP_VERSION = 'v2026.11.23.34';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -234,7 +234,7 @@ function saveParcelas(){save('casa/parcelas',{itens:S.parcelas})}
 function saveConfig(){var c=Object.assign({},S.config);c.regras=(c.regras||[]).map(function(r){return Array.isArray(r)?{p:r[0],c:r[1]}:r});save('casa/config',c)}
 
 /* ---------- cálculos ---------- */
-function parcelasDoMes(ym){var out=[];S.parcelas.forEach(function(p){var d=ymDiff(p.mes,ym),n=(+p.atual||1)+d;if(d>=0&&n>=1&&n<=p.total)out.push(Object.assign({},p,{n:n}))});return out}
+function parcelasDoMes(ym){var out=[];S.parcelas.forEach(function(p){var d=ymDiff(p.mes,ym),n=(+p.atual||1)+d;if(d>=0&&n>=1&&n<=p.total&&(p.adiantadas||[]).indexOf(ym)<0)out.push(Object.assign({},p,{n:n}))});return out}
 function sum(a){return a.reduce(function(s,x){return s+(+x.valor||0)},0)}
 function group(arr,k){var m={};arr.forEach(function(x){var key=x[k]||'—';m[key]=(m[key]||0)+(+x.valor||0)});return Object.keys(m).map(function(key){return [key,m[key]]}).sort(function(a,b){return b[1]-a[1]})}
 /* ---------- previsão automática dos próximos meses ----------
@@ -282,7 +282,9 @@ function linhaGuardado(ym){
 /* ---------- Ajustar para não ficar negativo ----------
    Mostra os gastos que dá para mexer (previstos) e sugere cortes até o mês fechar no zero
    contando o guardado. Ordem: o que dói menos primeiro, respeitando um mínimo realista. */
-var AJUSTE=[['Restaurante/Lazer',50],['Ifood/Delivery',50],['IA',0],['Gastos extras',150],['Compras online',0],['Fatura cartão',800],['Supermercado',900],['Carne',100],['Energia',450]];
+// O que dá para mexer: comer fora, pedir comida, lazer/extras, mercado e um pouco da energia.
+// Parcelas, contas fixas, cartões, IA (trabalho) e água ficam como estão. Número negativo = corte máximo em R$.
+var AJUSTE=[['Restaurante/Lazer',0],['Ifood/Delivery',0],['Gastos extras',100],['Compras online',0],['Carne',50],['Supermercado',900],['Energia',-60]];
 function ajustaveis(ym){
   var ord={};AJUSTE.forEach(function(a,i){ord[a[0]]=i});
   return calc(ym).all.filter(function(x){return x.prev&&x.tipo==='despesa'&&ord[x.cat]!=null&&(+x.valor||0)>=20&&(x.cat!=='Fatura cartão'||!S.parcelas.some(function(p){return p.fonte===x.fonte}))})
@@ -290,13 +292,17 @@ function ajustaveis(ym){
 }
 function sugereCortes(ym,falta){ // divide o corte entre todos, proporcional ao que cada um ainda pode baixar
   var piso={};AJUSTE.forEach(function(a){piso[a[0]]=a[1]});
-  var L=ajustaveis(ym).map(function(x){var base=Math.round((+x.valor+(+x.usado||0))*100)/100;return {x:x,base:base,pode:Math.max(0,base-Math.max(piso[x.cat]||0,+x.usado||0))}});
+  var L=ajustaveis(ym).map(function(x){var base=Math.round((+x.valor+(+x.usado||0))*100)/100,p=piso[x.cat]||0,minimo=p<0?base+p:p;return {x:x,base:base,pode:Math.max(0,base-Math.max(minimo,+x.usado||0))}});
   var tot=L.reduce(function(a,r){return a+r.pode},0),fr=tot>0?Math.min(1,falta/tot):0,cortado=0;
   L.forEach(function(r){var c=Math.min(r.pode,Math.ceil(r.pode*fr/10)*10);r.novo=Math.round((r.base-c)*100)/100;cortado+=c});
   return L;
 }
+function corteNecessario(ym){ // corte mensal igual em ym e nos meses negativos seguintes para o guardado nunca ficar negativo
+  var f=fluxo(ym),D=[-f.res],m=ym;for(var i=0;i<5;i++){m=ymAdd(m,1);var r=fluxo(m).res;if(r>=-0.5)break;D.push(-r)}
+  var acc=0,X=0;D.forEach(function(d,j){acc+=d;X=Math.max(X,(acc-f.G)/(j+1))});return {X:Math.max(0,Math.ceil(X)),meses:D.length};
+}
 function abreAjuste(ym){
-  var f=fluxo(ym),falta=Math.max(0,-f.com),mes=MESES[+ym.split('-')[1]-1].toLowerCase(),L=sugereCortes(ym,falta);
+  var f=fluxo(ym),cn=corteNecessario(ym),falta=cn.X,mes=MESES[+ym.split('-')[1]-1].toLowerCase(),L=sugereCortes(ym,falta);
   if(!L.length){toast('Não há gastos previstos para ajustar neste mês.');return}
   var info=h('div',{class:'hint',style:'font-size:15px;margin:6px 0 10px'}),inps=[];
   var lista=h('div',null);
@@ -304,13 +310,14 @@ function abreAjuste(ym){
     var inp=h('input',{type:'text',inputmode:'decimal',value:String(r.novo).replace('.',','),style:'width:110px;text-align:right;font-size:17px'});inp.oninput=calcula;inps.push(inp);
     lista.append(h('div',{class:'row',style:'min-height:52px'},h('div',{class:'ic',style:'background:var(--chip)'},r.x.cat==='Fatura cartão'?'💳':icon(r.x.cat)),h('div',{class:'grow'},h('div',{class:'t'},nome),h('div',{class:'s'},'hoje '+brlRaw(r.base))),inp))});
   function calcula(){var corte=0;L.forEach(function(r,i){corte+=r.base-parseVal(inps[i].value)});var fica=f.com+corte;
-    info.innerHTML='';info.append(h('div',null,'Cortando ',h('b',null,brlRaw(corte)),', '+mes+' fica com ',h('b',{style:'color:'+(fica<-0.5?'var(--bad)':'var(--ok)')},brlRaw(fica)),' contando o guardado.'))}
+    info.innerHTML='';info.append(h('div',null,'Cortando ',h('b',null,brlRaw(corte)),' por mês, '+mes+' fica com ',h('b',{style:'color:'+(fica<-0.5?'var(--bad)':'var(--ok)')},brlRaw(fica)),' contando o guardado.'))}
   calcula();
   var fProx=h('input',{type:'checkbox'});fProx.checked=true;
   sheet([h('h2',null,'✂️ Ajustar '+mes),
-    h('div',{class:'hint'},falta>0?'Hoje '+mes+' fica '+brlRaw(f.com)+'. Sugeri cortes começando pelo que dói menos; mude os valores como quiser.':mes.charAt(0).toUpperCase()+mes.slice(1)+' já fecha positivo. Se quiser, ajuste para sobrar mais.'),
+    h('div',{class:'hint'},falta>0?(cn.meses>1?'De '+mes+' em diante, '+cn.meses+' meses ficam negativos. Cortando uns '+brlRaw(falta)+' por mês (e usando o guardado), nenhum deles fica no vermelho. ':'Hoje '+mes+' fica '+brlRaw(f.com)+'. ')+'Sugeri cortes só no que dá para mexer (mercado, comer fora, delivery, lazer/extras e um pouco da energia). Mude os valores como quiser.':mes.charAt(0).toUpperCase()+mes.slice(1)+' já fecha positivo. Se quiser, ajuste para sobrar mais.'),
     info,lista,
     h('label',{class:'chk',style:'padding:8px 0'},fProx,'Manter esses valores nos meses seguintes'),
+    h('a',{style:'display:block;color:var(--acc);margin:4px 0 8px;cursor:pointer',onclick:function(){closeSheet();S.tab='mais';S.sub='parcelas';render()}},'⏩ Outra saída: adiantar parcelas num mês que sobra →'),
     h('div',{class:'foot'},h('button',{class:'b',onclick:function(){
       var temV=L.some(function(r){return r.x.virt}),mp=temV?materializa(ym):{};
       var novos={};L.forEach(function(r,i){var id=r.x.virt?mp[r.x.id]:r.x.id;novos[id]={v:parseVal(inps[i].value),desc:r.x.desc}});
@@ -320,9 +327,14 @@ function abreAjuste(ym){
       vib();closeSheet();toast('Ajustado.');render()}},'Aplicar'))]);
 }
 function idGuardar(ym){return 'guardar-'+ym}
-function sugestaoGuardar(ym){ // quanto separar neste mês para o mês seguinte fechar no zero (contando o guardado)
-  var jaI=sum(calc(ym).all.filter(function(x){return x.tipo==='investimento'&&x.id===idGuardar(ym)})),n=fluxo(ymAdd(ym,1));
-  return Math.max(0,Math.round((jaI-n.com)*100)/100);
+function trechoNegativo(ym){ // meses seguintes que ficam negativos em sequência (até 6)
+  var out=[],m=ymAdd(ym,1);for(var i=0;i<6;i++,m=ymAdd(m,1)){var r=fluxo(m).res;if(r>=-0.5)break;out.push({m:m,def:-r})}return out;
+}
+function sugestaoGuardar(ym){ // quanto separar neste mês para os meses negativos seguintes não ficarem no vermelho
+  var jaI=sum(calc(ym).all.filter(function(x){return x.tipo==='investimento'&&x.id===idGuardar(ym)})),f=fluxo(ym),sobra=f.res+jaI;
+  var T=trechoNegativo(ym);if(!T.length)return 0;
+  var G0=fluxo(ymAdd(ym,1)).G-jaI,need=T.reduce(function(a,t){return a+t.def},0)-G0;
+  return Math.max(0,Math.round(Math.min(need,Math.max(0,sobra))*100)/100);
 }
 function abreGuardar(ym){
   var prox=MESES[+ymAdd(ym,1).split('-')[1]-1].toLowerCase(),mes=MESES[+ym.split('-')[1]-1].toLowerCase();
@@ -330,7 +342,7 @@ function abreGuardar(ym){
   var atual=it?+it.valor:0,sobraSem=Math.round((f.res+atual)*100)/100;
   var fV=h('input',{type:'text',inputmode:'decimal',value:String(it?it.valor:sug).replace('.',','),autocomplete:'off'});
   var info=h('div',{class:'hint'});
-  function atualiza(){var v=parseVal(fV.value),r=sobraSem-v;info.textContent=(sug>0?'Para '+prox+' não ficar negativo: '+brlRaw(sug)+'. ':prox.charAt(0).toUpperCase()+prox.slice(1)+' já fecha sem precisar guardar. ')+'Separando '+brlRaw(v)+', '+mes+' fica com '+brlRaw(r)+'.'}
+  function atualiza(){var v=parseVal(fV.value),r=sobraSem-v;info.textContent=(sug>0?(function(){var T=trechoNegativo(ym),tot=T.reduce(function(a,t){return a+t.def},0),nomes=T.length>1?MES3[+T[0].m.split('-')[1]-1]+' a '+MES3[+T[T.length-1].m.split('-')[1]-1]:prox;return 'Os meses de '+nomes+' vão faltar '+brlRaw(tot)+' no total. Sugiro separar '+brlRaw(sug)+(sug<tot-0.5?' (é o que '+mes+' aguenta; o resto sai dos cortes ✂️ nesses meses)':'')+'. '})():prox.charAt(0).toUpperCase()+prox.slice(1)+' já fecha sem precisar guardar. ')+'Separando '+brlRaw(v)+', '+mes+' fica com '+brlRaw(r)+'.'}
   fV.oninput=atualiza;atualiza();
   function grava(v){
     var L=monthLanc(ym).filter(function(x){return x.id!==idGuardar(ym)});
@@ -395,7 +407,7 @@ function calc(ym){
   var tot={};L.forEach(function(x){if(x.prev&&x.cat==='Fatura cartão')tot[x.fonte]=1});   // total previsto do cartão já inclui as parcelas
   var proj=parcelasDoMes(ym).filter(function(p){return !imp[p.fonte]&&!tot[p.fonte]}).map(function(p){return {id:'p'+p.id,pid:p.id,desc:p.desc+' ('+p.n+'/'+p.total+')',valor:p.valor,tipo:'despesa',cat:'Parcelas',fonte:p.fonte,pessoa:p.pessoa,proj:true,pago:false}});
   L=L.filter(function(x){return !(x.prev&&imp[x.fonte])});   // previsto some quando a fatura daquele cartão chega
-  var real={};L.forEach(function(x){if(!x.prev&&x.tipo==='despesa'&&x.orig!=='fatura'&&x.orig!=='planilha')real[x.cat]=(real[x.cat]||0)+(+x.valor||0)});
+  var real={};L.forEach(function(x){if(!x.prev&&x.tipo==='despesa'&&x.orig!=='fatura'&&x.orig!=='planilha'&&!x.adiant&&x.cat!=='Parcelas'&&x.cat!=='Fatura cartão')real[x.cat]=(real[x.cat]||0)+(+x.valor||0)});
   var temPrev={};L.forEach(function(x){if(x.prev)temPrev[x.cat]=1});
   if(temPrev['Gastos extras'])Object.keys(real).forEach(function(k){if(!temPrev[k]&&k!=='Gastos extras'){real['Gastos extras']=(real['Gastos extras']||0)+real[k];delete real[k]}});
   L=L.map(function(x){if(!x.prev||x.tipo!=='despesa'||x.cat==='Fatura cartão'||!real[x.cat])return x;var usa=Math.min(real[x.cat],+x.valor||0);real[x.cat]-=usa;return Object.assign({},x,{valor:Math.round((x.valor-usa)*100)/100,usado:usa})}).filter(function(x){return !(x.prev&&x.usado&&x.valor<=0)});
@@ -630,7 +642,7 @@ function vInicio(root){
     c.I>0?h('div',{class:'cmp',style:'cursor:pointer;text-decoration:underline dotted',onclick:function(){listaGuardar(S.ym)}},'🐷 Separado para guardar neste mês: '+brl(c.I)+' ✎'):null,
     linhaGuardado(S.ym),
     botaoGuardarProx(S.ym),
-    (fluxo(S.ym).com<-0.5&&ajustaveis(S.ym).length)?h('button',{class:'b sec full',style:'margin-top:10px;background:#fff;color:#c0392b;border:0;font-weight:700',onclick:function(){abreAjuste(S.ym)}},'✂️ Ajustar gastos para não ficar negativo'):null));
+    ((fluxo(S.ym).com<-0.5||(fluxo(S.ym).G>0&&corteNecessario(S.ym).X>0))&&ajustaveis(S.ym).length)?h('button',{class:'b sec full',style:'margin-top:10px;background:#fff;color:#c0392b;border:0;font-weight:700',onclick:function(){abreAjuste(S.ym)}},'✂️ Ajustar gastos para não ficar negativo'):null));
   if(S.owner&&S.pedidos.length)root.append(cardPedidos());
   root.append(h('button',{class:'b full',style:'margin:0 0 12px;font-size:17px;padding:15px',onclick:function(){openForm(null)}},'＋ Lançar conta ou gasto'));
   // contas do mês, uma linha por conta (como na planilha)
@@ -661,7 +673,7 @@ function vInicio(root){
   (function(){var prox=MESES[+ymAdd(S.ym,1).split('-')[1]-1].toLowerCase(),it=monthLanc(S.ym).filter(function(x){return x.id===idGuardar(S.ym)})[0],sug=sugestaoGuardar(S.ym),outros=c.I-(it?+it.valor:0);
     cc.append(h('div',{class:'row',style:'cursor:pointer;border-top:2px dashed var(--line);margin-top:4px',onclick:function(){abreGuardar(S.ym)}},
       h('div',{class:'ic',style:'background:#ffe3ec'},'🐷'),
-      h('div',{class:'grow'},h('div',{class:'t'},'Guardar para '+prox),h('div',{class:'s'},it?(sug>+it.valor+0.5?'⚠️ ainda faltam '+brl(sug-it.valor)+' para '+prox:'✓ '+prox+' coberto · toque para mudar'):(sug>0?'sugerido '+brl(sug)+' para '+prox+' não ficar negativo':'não precisa · toque para separar'))),
+      h('div',{class:'grow'},h('div',{class:'t'},'Guardar para '+prox),h('div',{class:'s'},it?(sug>+it.valor+0.5?'pode separar mais '+brl(sug-it.valor):'✓ '+prox+' coberto · toque para mudar'):(sug>0?'sugerido '+brl(sug)+' para '+prox+' não ficar negativo':'não precisa · toque para separar'))),
       h('div',{class:'v',style:'color:'+(it?'var(--tx)':'var(--mut)')},it?brl(it.valor):(sug>0?brl(sug):'—'))));
     if(outros>0.009)cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){listaGuardar(S.ym)}},h('div',{class:'ic',style:'background:#ffe3ec'},'🐷'),h('div',{class:'grow'},h('div',{class:'t'},'Outros valores separados'),h('div',{class:'s'},'toque para ver')),h('div',{class:'v'},brl(outros))));
   })();
@@ -1020,6 +1032,7 @@ function openForm(item,draft){
 function vParc(root){
   root.append(back('Parcelas'));
   root.append(h('button',{class:'b full',style:'margin-bottom:12px',onclick:function(){openParc(null)}},'+ Nova compra parcelada'));
+  root.append(h('div',{class:'hint',style:'margin:-4px 0 10px'},'⏩ Para aliviar um mês apertado: abra o mês que está sobrando, toque numa parcela e use "Adiantar".'));
   var card=h('div',{class:'card',style:'padding:2px 12px'});
   S.parcelas.slice().sort(function(a,b){return b.valor-a.valor}).forEach(function(p){
     var n=(+p.atual||1)+ymDiff(p.mes,S.ym);var rest=Math.max(0,p.total-Math.max(n,0));
@@ -1033,6 +1046,30 @@ function vParc(root){
   var pr=h('div',{class:'card'},h('h3',null,'Próximos 12 meses'));
   for(var i=0;i<12;i++){var m=ymAdd(S.ym,i);pr.append(h('div',{class:'row',style:'min-height:40px;padding:6px 0'},h('div',{class:'grow'},ymLabel(m)),h('div',{class:'v'},brl(sum(parcelasDoMes(m))))))}
   root.append(pr);
+}
+/* Adiantar parcelas: paga agora (no mês aberto) parcelas de meses futuros, com o desconto que o banco der.
+   Os meses escolhidos ficam mais leves. Quando a fatura do mês for importada, o adiantamento já vem nela. */
+function abreAdiantar(p){
+  var futuros=[];for(var i=1;i<=60;i++){var m=ymAdd(S.ym,i),d=ymDiff(p.mes,m),n=(+p.atual||1)+d;if(n>p.total)break;if(d>=0&&n>=1&&(p.adiantadas||[]).indexOf(m)<0)futuros.push({m:m,n:n})}
+  if(!futuros.length){toast('Não há parcelas futuras para adiantar.');return}
+  var neg={};futuros.forEach(function(f){if(fluxo(f.m).com<-0.5)neg[f.m]=1});
+  var cks=futuros.map(function(f){var c=h('input',{type:'checkbox'});c.checked=!!neg[f.m];c.onchange=calc2;return c});
+  var fDesc=h('input',{type:'text',inputmode:'decimal',value:'0',style:'width:70px;text-align:center'});fDesc.oninput=calc2;
+  var info=h('div',{class:'hint',style:'font-size:15px;margin:8px 0'});
+  function calc2(){var q=cks.filter(function(c){return c.checked}).length,t=q*p.valor*(1-(parseVal(fDesc.value)||0)/100);info.textContent=q?'Paga agora em '+MESES[+S.ym.split('-')[1]-1].toLowerCase()+': '+brlRaw(t)+' ('+q+' parcela'+(q>1?'s':'')+'). Esses meses ficam '+brlRaw(p.valor)+' mais leves cada.':'Marque os meses que quer aliviar.'}
+  calc2();
+  var lista=h('div',null);futuros.forEach(function(f,i){var r=fluxo(f.m);lista.append(h('label',{class:'chk',style:'justify-content:space-between'},h('span',null,cks[i],' '+MESES[+f.m.split('-')[1]-1]+' '+f.m.slice(0,4)+' · '+f.n+'/'+p.total),h('span',{class:signCls(r.com),style:'font-size:13px'},'mês '+brl(r.com))))});
+  sheet([h('h2',null,'⏩ Adiantar '+p.desc),
+    h('div',{class:'hint'},'Paga parcelas futuras agora, no mês que está aberto. Os meses marcados em vermelho são os que estão negativos. No app do banco, veja quanto de desconto ele dá para adiantar.'),
+    lista,
+    h('div',{style:'display:flex;align-items:center;justify-content:space-between;margin:8px 0'},h('span',null,'Desconto do banco (%)'),fDesc),
+    info,
+    h('div',{class:'foot'},h('button',{class:'b',onclick:function(){
+      var sel=futuros.filter(function(f,i){return cks[i].checked});if(!sel.length){toast('Marque pelo menos um mês.');return}
+      var t=Math.round(sel.length*p.valor*(1-(parseVal(fDesc.value)||0)/100)*100)/100;
+      S.parcelas=S.parcelas.map(function(x){return x.id===p.id?Object.assign({},x,{adiantadas:(x.adiantadas||[]).concat(sel.map(function(f){return f.m}))}):x});saveParcelas();
+      setMonth(S.ym,monthLanc(S.ym).concat([{id:'adiant-'+p.id+'-'+S.ym+'-'+sel.length,desc:'Adiantamento '+p.desc+' ('+sel.map(function(f){return f.n}).join(', ')+'/'+p.total+')',valor:t,tipo:'despesa',cat:'Parcelas',fonte:p.fonte,pessoa:p.pessoa||'Casal',data:today(),pago:false,fixa:false,orig:'auto',adiant:true}]));
+      vib();closeSheet();toast('Adiantado: '+brlRaw(t)+' em '+ymLabel(S.ym)+'.');render()}},'Adiantar'))]);
 }
 function openParc(p){
   var it=Object.assign({desc:'',valor:'',atual:1,total:2,mes:S.ym,fonte:S.config.fontes[0]||'',pessoa:'Casal'},p||{});
@@ -1051,6 +1088,7 @@ function openParc(p){
     h('label',{class:'f'},'De quem'),chips(S.config.pessoas,st.pessoa,function(v){st.pessoa=v}),
     h('div',{class:'foot'},
       p?h('button',{class:'b red',style:'flex:0 0 auto',onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Confirmar?';return}S.parcelas=S.parcelas.filter(function(x){return x.id!==it.id});saveParcelas();closeSheet();render()}},'🗑'):null,
+      p?h('button',{class:'b sec',style:'flex:0 0 auto',onclick:function(){closeSheet();abreAdiantar(p)}},'⏩ Adiantar'):null,
       h('button',{class:'b',onclick:function(){
         var o=Object.assign({},it,{desc:fD.value.trim(),valor:parseVal(fV.value),atual:+fA.value||1,total:+fT.value||1,mes:fM.value||S.ym,fonte:st.fonte,pessoa:st.pessoa});
         if(!o.desc||!o.valor){toast('Informe descrição e valor.');return}
