@@ -123,6 +123,8 @@ label.f>input,label.f>select,label.f>textarea{margin-top:4px}
 .sheet{position:fixed;inset:0;background:rgba(8,12,22,.55);display:flex;align-items:flex-end;justify-content:center;z-index:40;animation:fade .15s}
 .sheet>div{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:8px 16px calc(16px + var(--sab));animation:up .2s ease-out}
 .sheet .grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 10px}
+.shtop{position:sticky;top:-8px;z-index:2;background:var(--card);margin:-8px -16px 4px;padding:10px 16px 2px;touch-action:none;cursor:grab}
+.shx{position:absolute;right:10px;top:6px;width:36px;height:36px;border-radius:50%;border:0;background:var(--chip);color:var(--tx);font-size:16px;font-weight:700;cursor:pointer}
 .sheet h2{margin:0 0 12px;font-size:18px}
 .sheet .foot{position:sticky;bottom:calc(-16px - var(--sab));background:var(--card);padding:10px 0 calc(6px + var(--sab));margin-top:6px;display:flex;gap:8px}
 .sheet .foot>*{flex:1}
@@ -189,7 +191,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.8';
+const APP_VERSION = 'v2026.11.24.9';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1087,13 +1089,24 @@ function vPessoas(root){
 }
 
 /* ---------- formulário rápido ---------- */
-function sheet(content){var m=$('#modal');var box=h('div',null,h('div',{class:'grab'}),content);var bg=h('div',{class:'sheet',onclick:function(e){if(e.target===bg)closeSheet()}},box);m.replaceChildren(bg);
-  // fechar arrastando para baixo só pela alça de cima (tocar num campo para digitar nunca fecha)
-  var sy=null;box.addEventListener('touchstart',function(e){var t=e.target,tag=(t.tagName||'').toLowerCase(),y=e.touches[0].clientY,topo=box.getBoundingClientRect().top;
-    sy=(box.scrollTop<=0&&y-topo<44&&['input','textarea','select','button','label'].indexOf(tag)<0)?y:null},{passive:true});
-  box.addEventListener('touchend',function(e){var a=document.activeElement,tag=a&&(a.tagName||'').toLowerCase();if(sy!=null&&tag!=='input'&&tag!=='textarea'&&e.changedTouches[0].clientY-sy>110)closeSheet();sy=null},{passive:true});
+function sheet(content){
+  var m=$('#modal');
+  var topo=h('div',{class:'shtop'},h('div',{class:'grab'}),h('button',{type:'button',class:'shx','aria-label':'Fechar',onclick:function(){closeSheet()}},'✕'));
+  var box=h('div',null,topo,content);
+  var bg=h('div',{class:'sheet',onclick:function(e){if(e.target===bg)closeSheet()}},box);m.replaceChildren(bg);
+  // arrastar pela parte de cima acompanha o dedo; soltou mais de 1/4 da altura, fecha
+  var y0=null,dy=0;
+  topo.addEventListener('touchstart',function(e){if(e.target.closest('.shx'))return;y0=e.touches[0].clientY;dy=0;box.style.transition='none'},{passive:true});
+  topo.addEventListener('touchmove',function(e){if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);box.style.transform='translateY('+dy+'px)';bg.style.background='rgba(0,0,0,'+Math.max(.1,.55-dy/800)+')'},{passive:true});
+  topo.addEventListener('touchend',function(){if(y0==null)return;y0=null;box.style.transition='transform .2s ease-out';if(dy>Math.min(140,box.offsetHeight/4))closeSheet();else{box.style.transform='';bg.style.background=''}},{passive:true});
   return box}
-function closeSheet(){$('#modal').replaceChildren()}
+function closeSheet(){
+  var bg=$('#modal').firstChild,box=bg&&bg.firstChild;
+  if(!box||bg._fechando){$('#modal').replaceChildren();return}
+  bg._fechando=true;try{document.activeElement&&document.activeElement.blur()}catch(e){}
+  box.style.transition='transform .2s ease-in';box.style.transform='translateY(105%)';bg.style.transition='background .2s';bg.style.background='rgba(0,0,0,0)';
+  setTimeout(function(){if($('#modal').firstChild===bg)$('#modal').replaceChildren()},190);
+}
 function openForm(item,draft){
   if(draft){var d0=item;item=null}
   var ymOrig=item?(item._ym||S.ym):null;
@@ -1102,10 +1115,13 @@ function openForm(item,draft){
   if(item&&!item.data)it.data='';
   var st={tipo:it.tipo,cat:it.cat,fonte:it.fonte,pessoa:it.pessoa};
   var seg=h('div',{class:'seg'});
-  [['despesa','Despesa','d'],['receita','Receita','r'],['investimento','Investir','i']].forEach(function(o){var b=h('button',{type:'button',class:(st.tipo===o[0]?'on ':'')+o[2],onclick:function(){st.tipo=o[0];[].forEach.call(seg.children,function(c){c.classList.remove('on')});b.classList.add('on');if(o[0]==='receita'&&!st.cat){st.cat='Salário';catW.replaceWith(catW=catChips())}}},o[1]);seg.append(b)});
+  [['despesa','Gasto','d'],['receita','Entrou dinheiro','r'],['investimento','🐷 Guardar','i']].forEach(function(o){var b=h('button',{type:'button',class:(st.tipo===o[0]?'on ':'')+o[2],onclick:function(){var mud=st.tipo!==o[0];st.tipo=o[0];[].forEach.call(seg.children,function(c){c.classList.remove('on')});b.classList.add('on');if(mud){st.cat=o[0]==='receita'?'Renda extra':o[0]==='investimento'?'Reserva de emergência':(S.last.cat||'');var n2=catChips();catW.replaceWith(n2);catW=n2}ajustaTipo()}},o[1]);seg.append(b)});
   var fVal=h('input',{type:'text',inputmode:'decimal',value:it.valor===''?'':String(it.valor).replace('.',','),placeholder:'0,00',autocomplete:'off'});
   var fDesc=h('input',{type:'text',value:it.desc,placeholder:'Descrição (ex.: Energia, Mercado)',autocomplete:'off',enterkeyhint:'done'});
+  var CAT_REC=['Salário','Renda extra','Reembolso','Presente','Outros'];
   function catChips(){
+    if(st.tipo==='receita')return chips(CAT_REC.map(function(c){return [c,(c==='Salário'?'💰 ':c==='Renda extra'?'✨ ':c==='Reembolso'?'↩️ ':c==='Presente'?'🎁 ':'• ')+c]}),st.cat,function(v){st.cat=v});
+    if(st.tipo==='investimento')return h('div');
     var used={};Object.keys(S.months).forEach(function(k){monthLanc(k).forEach(function(x){if(x.cat)used[x.cat]=(used[x.cat]||0)+1})});
     var cats=S.config.cats.slice().sort(function(a,b){return (used[b]||0)-(used[a]||0)});
     return chips(cats.map(function(cn){return [cn,icon(cn)+' '+cn]}),st.cat,function(v){st.cat=v});
@@ -1123,7 +1139,7 @@ function openForm(item,draft){
     h('label',{class:'chk'},fFixa,'🔁 Repetir todo mês'));
   function doSave(again){
     delete it._notif;
-    var o=Object.assign({},it,{tipo:st.tipo,desc:fDesc.value.trim()||st.cat||'',valor:parseVal(fVal.value),cat:st.cat,fonte:st.fonte,pessoa:st.pessoa,data:fData.value,venc:fVenc.value,pago:fPago.checked,fixa:fFixa.checked});
+    var o=Object.assign({},it,{tipo:st.tipo,desc:fDesc.value.trim()||(st.tipo==='investimento'?'Guardado':st.cat)||'',valor:parseVal(fVal.value),cat:st.tipo==='investimento'?'Reserva de emergência':st.cat,fonte:st.tipo==='despesa'?st.fonte:'',pessoa:st.pessoa,data:fData.value,venc:fVenc.value,pago:fPago.checked,fixa:fFixa.checked});
     delete o._ym;
     if(!o.valor){toast('Digite o valor.');fVal.focus();return}
     if(!o.id){o.id=uid();o.orig='manual'}
@@ -1147,11 +1163,24 @@ function openForm(item,draft){
       openForm({tipo:r.tipo,valor:r.valor,desc:r.desc,cat:r.cat||(r.tipo==='receita'?'Salário':st.cat),fonte:f,pessoa:st.pessoa,data:fData.value,_notif:1},true);
       toast('Preenchido pelo aviso. Confira e salve.');
     }},'Preencher com o aviso'));
+  var lblCat=h('label',{class:'f'},'Categoria');
+  var blocoFonte=h('div',null,h('label',{class:'f'},'Pago com'),chips(S.config.fontes,st.fonte,function(v){st.fonte=v}));
+  var dicaTipo=h('div',{class:'hint',style:'margin:-4px 0 10px'});
+  function ajustaTipo(){
+    var t=st.tipo;
+    lblCat.style.display=t==='investimento'?'none':'';lblCat.textContent=t==='receita'?'De onde veio':'Categoria';
+    blocoFonte.style.display=t==='despesa'?'':'none';
+    fDesc.placeholder=t==='receita'?'Ex.: Freela, venda do berço, reembolso':t==='investimento'?'Para quê? (ex.: Reserva, Enxoval da Agnes)':'Descrição (ex.: Energia, Mercado)';
+    dicaTipo.textContent=t==='receita'?'Entra no resultado do mês. Se quiser deixar esse dinheiro guardado, lance também em 🐷 Guardar.':t==='investimento'?'Sai do resultado do mês e vai para o 🐷 Guardado, que cobre meses negativos depois.':'';
+    dicaTipo.style.display=t==='despesa'?'none':'';
+  }
+  setTimeout(ajustaTipo,0);
   sheet([h('h2',null,item?'Editar lançamento':'Novo lançamento'),seg,
     h('div',{class:'amt'},h('span',null,'R$'),fVal),
     fDesc,h('div',{style:'height:12px'}),
-    h('label',{class:'f'},'Categoria'),catW,
-    h('label',{class:'f'},'Pago com'),chips(S.config.fontes,st.fonte,function(v){st.fonte=v}),
+    lblCat,catW,
+    blocoFonte,
+    dicaTipo,
     det,
     it.itens&&it.itens.length?(function(){var dd=h('details',null,h('summary',null,'🧾 '+it.itens.length+' itens da compra ▾'));it.itens.forEach(function(x){dd.append(h('div',{class:'it'},h('div',{style:'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},(x.n||'Item')+((x.q||1)>1?' ('+x.q+'×'+brlRaw(x.v)+')':'')),h('b',null,brlRaw(x.v*(x.q||1)))))});return dd})():null,
     it.venc?h('a',{class:'b sec full',style:'display:block;text-align:center;text-decoration:none;margin-top:8px;line-height:22px',target:'_blank',rel:'noopener',href:'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('💸 Pagar: '+(it.desc||'conta')+' · '+brlRaw(it.valor||0))+'&dates='+it.venc.replace(/-/g,'')+'/'+dPlus(it.venc).replace(/-/g,'')+'&details='+encodeURIComponent('Contas da Casa')},'🔔 Lembrar no Google Agenda'):null,
