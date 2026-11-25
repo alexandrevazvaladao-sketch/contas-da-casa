@@ -239,7 +239,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.25.9';
+const APP_VERSION = 'v2026.11.25.10';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -327,7 +327,7 @@ function virtuais(ym){
   var out=[];
   if(!atual.some(planejado)){
     var k=mesModelo(ym);
-    if(k){var comParc={};S.parcelas.forEach(function(p){comParc[p.fonte]=1});
+    if(k){var comParc={};S.parcelas.forEach(function(p){if(!p.origem)comParc[p.fonte]=1});
       monthLanc(k).filter(function(x){return planejado(x)&&!x.naoRepete&&x.tipo!=='investimento'&&!(x.cat==='Fatura cartão'&&comParc[x.fonte])})
         .forEach(function(x){out.push(Object.assign({},x,{id:'v'+ym+x.id,virt:true,prev:x.tipo!=='receita',pago:false,venc:''}));tem[x.desc]=1})}
   }
@@ -2239,7 +2239,7 @@ function vCfg(root){
           if(!S.months[a.ym]&&!a.valor)return;
           var L=monthLanc(a.ym).slice(),i=L.findIndex(function(x){return x.desc===a.desc&&x.orig!=='fatura'});
           if(i>=0){if(a.valor)L[i]=Object.assign({},L[i],{valor:a.valor});else L.splice(i,1)}
-          else if(a.valor)L.push({id:uid(),desc:a.desc,valor:a.valor,tipo:a.tipo||'despesa',cat:a.cat||'Outros',fonte:a.fonte||'',pessoa:'Casal',data:'',pago:false,fixa:false,orig:'previsao',prev:true});
+          else if(a.valor)L.push({id:uid(),desc:a.desc,valor:a.valor,tipo:a.tipo||'despesa',cat:a.cat||'Outros',fonte:a.fonte||'',pessoa:a.pessoa||'Casal',data:'',pago:false,fixa:false,orig:'previsao',prev:(a.tipo||'despesa')!=='receita'});
           S.months[a.ym]={lanc:L};mudou[a.ym]=1;nov++;
         });
         if(mig)S.config.migracoes=(S.config.migracoes||[]).concat([j.migracao]);
@@ -2251,7 +2251,7 @@ function vCfg(root){
 }
 
 /* ---------- init ---------- */
-var ROTAS={mercado:['mercado',''],inicio:['inicio',''],extrato:['extrato',''],pagar:['pagar',''],parcelas:['mais','parcelas'],fatura:['mais','fatura'],boleto:['mais','boletos'],acerto:['mais','pessoas']};
+var ROTAS={mercado:['mercado',''],inicio:['inicio',''],extrato:['extrato',''],pagar:['pagar',''],parcelas:['mais','parcelas'],fatura:['mais','fatura'],boleto:['mais','boletos'],acerto:['mais','pessoas'],ajustes:['mais','ajustes']};
 function rota(){var hsh=(location.hash||'').slice(1);if(hsh==='novo'){if(liberado())openForm(null);else S.pendNovo=true;return}var r=ROTAS[hsh];if(r){S.tab=r[0];S.sub=r[1];render()}}
 function goMonth(n){S.ym=ymAdd(S.ym,n);vib();render()}
 function init(){
