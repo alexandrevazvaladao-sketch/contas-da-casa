@@ -51,7 +51,10 @@ html,body{margin:0;overscroll-behavior-y:none;touch-action:manipulation}
 button,a,label,.chip,.row{touch-action:manipulation}
 body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.4}
 button{font:inherit;color:inherit}
-header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:5;padding-top:var(--sat)}
+header{background:var(--navy);color:#fff;position:relative;z-index:5;padding-top:var(--sat)}
+body::before{content:'';position:fixed;left:0;right:0;top:0;height:var(--sat);background:var(--navy);z-index:40;pointer-events:none}
+:root[data-tema="escuro"] body::before{background:#000}
+html,body{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;width:0;height:0;background:transparent}
 /* iPhone (app na tela de início): o iOS desfoca a faixa logo abaixo do relógio; o título desce um pouco para ficar fora dela */
 @media (display-mode: standalone){header{padding-top:calc(var(--sat) + 26px)}}
 .top{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;max-width:720px;margin:0 auto}
@@ -202,7 +205,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.15';
+const APP_VERSION = 'v2026.11.24.16';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1515,8 +1518,7 @@ function atualizarAgora(){
   else p=Promise.resolve(false);
   p.catch(function(){S.offline=true;return 'off'}).then(function(ok){
     setTimeout(function(){
-      atualizarAgora._on=false;ptr.classList.remove('on');ptr.style.height='0';
-      render();vigia();
+      atualizarAgora._on=false;render();ptr.classList.remove('on');ptr.style.height='0';vigia();
       var um=ultimaMudanca();
       toast(ok==='off'?'Sem internet: mostrando o que está salvo no celular.':ok?'✓ Atualizado '+horaBR(S.syncAt)+(um?' · última mudança: '+(um.por||'alguém')+' '+horaBR(um.upd):''):'Atualizado.');
       try{if(window.__checarVersao)window.__checarVersao()}catch(e){}
