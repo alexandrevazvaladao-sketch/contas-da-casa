@@ -205,7 +205,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.17';
+const APP_VERSION = 'v2026.11.24.18';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -618,7 +618,7 @@ function updateHeader(){
   $('#eye').textContent=S.hide?'🙈':'👁';
   var t=$('#tabs');t.replaceChildren();
   TABS.forEach(function(x){
-    if(x[0]==='+'){t.append(h('button',{class:'fab',type:'button','aria-label':'Novo lançamento',onclick:function(){vib();openForm(null)}},'+'));return}
+    if(x[0]==='+'){var fb=h('button',{class:'fab',type:'button','aria-label':'Novo lançamento',onclick:function(){vib();openForm(null)}});fb.innerHTML='<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true" style="display:block"><path d="M13 3v20M3 13h20" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>';t.append(fb);return}
     t.append(h('button',{type:'button',class:S.tab===x[0]?'on':'',onclick:function(){S.tab=x[0];S.sub='';render();window.scrollTo(0,0)}},h('span',{class:'e'},x[1]),x[2]));
   });
 }
