@@ -61,7 +61,9 @@ html,body{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,b
 .ib{background:transparent;border:0;color:#fff;width:44px;height:44px;border-radius:12px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .ib:active{background:var(--navy2)}
 .mwrap{text-align:center;flex:1}
-.mlbl{font-weight:700;font-size:17px}
+.mlbl{font-weight:700;font-size:17px}.mlbl.ola{display:flex;align-items:center;gap:10px}.avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:2px solid rgba(255,255,255,.15)}.avatar.ini{display:inline-flex;align-items:center;justify-content:center;background:#8a2be2;color:#fff;font-size:15px}
+#splash{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .35s}#splash img{width:96px;height:96px;border-radius:24px;box-shadow:0 10px 50px rgba(138,43,226,.5);animation:pulsa 1.4s ease-in-out infinite}#splash b{margin-top:18px;font-size:20px;letter-spacing:-.3px}#splash i{width:26px;height:26px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:#a855f7;margin-top:28px;animation:gira .8s linear infinite}#splash.sai{opacity:0}@keyframes pulsa{50%{transform:scale(1.05)}}
+#lock{position:fixed;inset:0;z-index:99;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .3s}#lock.sai{opacity:0}
 .mstrip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 12px 10px;max-width:720px;margin:0 auto;scroll-snap-type:x proximity}
 .mstrip::-webkit-scrollbar{display:none}
 .mstrip button{flex:0 0 auto;border:1px solid rgba(255,255,255,.18);background:transparent;color:#c8d3ec;border-radius:18px;padding:7px 13px;font-size:14px;font-weight:600;cursor:pointer;scroll-snap-align:center;min-height:36px}
@@ -163,6 +165,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .quick button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;min-height:68px}
 .quick .e{font-size:22px}
 .search{margin-bottom:10px}
+.rapido{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 12px}.rapido button{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 4px 10px;color:var(--tx);display:flex;flex-direction:column;align-items:center;gap:6px;font:inherit;cursor:pointer}.rapido span{font-size:24px;width:46px;height:46px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center}.rapido small{font-size:11.5px;font-weight:600;text-align:center;line-height:1.15}.rapido button:active{transform:scale(.96)}
 .filtros{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}.filtros .chips{margin:0}
 .selpill{width:100%;appearance:none;-webkit-appearance:none;background:var(--chip);color:var(--tx);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font:inherit;font-size:14px;font-weight:600}
 .selpill.on{border-color:var(--acc);color:var(--acc)}:root[data-tema="escuro"] .selpill.on{color:#c9a4ff}
@@ -190,6 +193,7 @@ details summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
+<div id="splash"><img src="icon-192.png" alt=""><b>Contas da Casa</b><i></i></div>
 <header>
   <div class="top">
     <div class="mwrap" style="text-align:left;padding-left:6px"><div class="mlbl">Contas da Casa</div><div class="sync" id="sync">carregando…</div></div>
@@ -205,7 +209,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.26';
+const APP_VERSION = 'v2026.11.24.27';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -613,7 +617,7 @@ function desenhaMeses(){
   if(sel)setTimeout(function(){try{sel.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'})}catch(e){}},30);
 }
 function updateHeader(){
-  desenhaMeses();vigiaAgenda();
+  desenhaMeses();desenhaSaudacao();vigiaAgenda();
   $('#sync').textContent=FBMODE?(S.fbOk?(S.offline?'● sem internet · salvo no celular':(S.syncAt?'● atualizado '+horaBR(S.syncAt):'● sincronizado entre vocês')):''):db?(S.loaded?'● sincronizado entre vocês':'● conectando…'):'● salvo só neste aparelho';
   $('#eye').textContent=S.hide?'🙈':'👁';
   var t=$('#tabs');t.replaceChildren();
@@ -707,7 +711,7 @@ function vInicio(root){
   if(!linhas.length)cc.append(h('div',{class:'hint',style:'padding:6px 0'},'Nada lançado ainda. Toque em “Lançar conta ou gasto”.'));
   linhas.forEach(function(l){
     if(l.grupo){
-      cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){if(l.n===1){editaRapido(l.itens[0]);return}S.filtro={tipo:'',fonte:l.grupo,pessoa:'',q:''};S.tab='extrato';render()}},
+      cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){if(ehCartao(l.grupo)&&!(l.n===1&&l.itens[0].cat==='Fatura cartão')){abreCartao(l.grupo);return}if(l.n===1){editaRapido(l.itens[0]);return}S.filtro={tipo:'',fonte:l.grupo,pessoa:'',q:''};S.tab='extrato';render()}},
         h('div',{class:'ic',style:'background:var(--chip)'},'💳'),
         h('div',{class:'grow'},h('div',{class:'t'},l.grupo),h('div',{class:'s'},l.n===1?(l.itens[0].cat==='Fatura cartão'?'fatura do cartão':'1 compra')+(l.pago?' · ✓ pago':''):l.n+' compras · toque para ver')),
         h('div',{class:'v'},brl(l.valor))));
@@ -1081,10 +1085,21 @@ function vMais(root){
   root.append(h('div',{class:'card',style:'padding:12px 14px'},h('h3',null,'🎨 Aparência'),
     chips([['escuro','🌙 Escuro'],['claro','☀️ Claro'],['auto','📱 Igual ao celular']],tema,function(v){pref('tema',v);document.documentElement.setAttribute('data-tema',v);try{document.querySelector('meta[name="theme-color"]').setAttribute('content',v==='escuro'?'#000000':'#16233d')}catch(e){}render()}),
     h('div',{class:'hint',style:'margin:-6px 0 0'},'Vale só para este celular.')));
+  if(bioPode())root.append(h('div',{class:'card',style:'padding:12px 14px;display:flex;align-items:center;gap:10px'},h('div',{class:'grow'},h('div',{class:'t',style:'font-weight:700'},'🔒 Face ID ao abrir'),h('div',{class:'s',style:'white-space:normal'},bioAtivo()?'Ligado neste celular. Pede o Face ID ao abrir e quando volta depois de 1 minuto.':'Pede o Face ID para abrir o app neste celular.')),
+    h('button',{class:'b '+(bioAtivo()?'sec':''),style:'flex:0 0 auto;width:auto;padding:8px 14px',onclick:function(){if(bioAtivo()){bioDesativar();render()}else bioAtivar().then(function(){render()})}},bioAtivo()?'Desligar':'Ligar')));
   var items=[['🔍','Conferir lançamentos','Acha repetidos e valores que podem estar errados','conferir'],['🤔','Posso comprar isso?','Simula a compra (à vista ou parcelada) nos próximos meses','__posso'],['🔁','Assinaturas e fixas','O que se repete todo mês e quanto dá por ano','assinaturas'],['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['🏷️','Preços dos produtos','Histórico de preço das notas lidas','precos'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
+  var abreI=function(i){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)};
+  var busca=h('input',{type:'search',class:'search',placeholder:'🔎 Buscar no app (ex.: fatura, preços, backup)',value:S.qMenu||'',oninput:function(e){S.qMenu=e.target.value;filtra()}});
+  root.append(busca);
+  var rap=h('div',{class:'rapido'});
+  [['🔍','Conferir','conferir'],['🤔','Posso comprar?','__posso'],['📋','Extrato','__extrato'],['🏷️','Preços','precos']].forEach(function(r){rap.append(h('button',{type:'button',onclick:function(){abreI(['','','',r[2]])}},h('span',null,r[0]),h('small',null,r[1])))});
+  root.append(rap);
   var cd=h('div',{class:'card menu',style:'padding:2px 12px'});
+  function filtra(){var q=normItem(S.qMenu||'');[].forEach.call(cd.children,function(r){r.style.display=!q||normItem(r.textContent).indexOf(q)>=0?'':'none'});rap.style.display=q?'none':''}
+  setTimeout(filtra,0);
   items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
   root.append(cd);
+  [].slice.call(root.children,0,bioPode()?2:1).forEach(function(n){root.append(n)});   // aparência e Face ID vão para o fim, como nos apps de banco
   root.append(h('div',{class:'hint',style:'text-align:center'},'Dica: deslize para os lados na tela para trocar de mês.'));
   root.append(h('div',{class:'card',style:'padding:10px 14px;display:flex;align-items:center;gap:10px'},h('div',{class:'grow'},h('div',{class:'t'},'ℹ️ Versão do app'),h('div',{class:'s',style:'font-variant-numeric:tabular-nums'},APP_VERSION+(navigator.onLine?'':' · sem internet'))),h('button',{class:'b sec',style:'flex:0 0 auto;width:auto;padding:8px 12px',onclick:function(){toast('Procurando atualização…');setTimeout(function(){location.replace(location.pathname+'?v='+Date.now())},400)}},'🔄 Atualizar')));
 }
@@ -1591,6 +1606,86 @@ function abreEntraSai(tipo){
   document.addEventListener('touchmove',function(e){if(!travado)return;var box=e.target.closest&&e.target.closest('.sheet>div');if(!box){e.preventDefault();return}
     if(box.scrollHeight<=box.clientHeight+1)e.preventDefault()},{passive:false});
 })();
+
+/* ---------- Abertura (splash), saudação e Face ID ---------- */
+(function(){
+  var t0=Date.now();
+  function some(){var s=document.getElementById('splash');if(!s||s._fim)return;s._fim=1;s.classList.add('sai');setTimeout(function(){s.remove()},380)}
+  var iv=setInterval(function(){var ok=liberado();if((S.loaded||ok===false||!FBMODE)&&Date.now()-t0>650){clearInterval(iv);some()}else if(Date.now()-t0>7000){clearInterval(iv);some()}},120);
+})();
+function saudacao(){var n=quemSou();var hr=new Date().getHours();return (hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite')+(n?', '+n:'')}
+function desenhaSaudacao(){
+  var el=$('.mlbl');if(!el)return;var u=S.fbUser;
+  if(!u){el.textContent='Contas da Casa';return}
+  var foto=u.photoURL?h('img',{src:u.photoURL,alt:'',referrerpolicy:'no-referrer',class:'avatar'}):h('span',{class:'avatar ini'},(quemSou()||'?').charAt(0));
+  el.replaceChildren(foto,h('span',null,saudacao()));el.classList.add('ola');
+}
+/* Face ID: usa a chave do próprio iPhone (passkey). Só trava a tela deste celular; não sai nada da casa. */
+var BIO_KEY='cc-bio';
+function b64(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf)))}
+function unb64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a.buffer}
+function rnd(n){var a=new Uint8Array(n);crypto.getRandomValues(a);return a}
+function bioPode(){return !!(window.PublicKeyCredential&&navigator.credentials)}
+function bioAtivo(){try{return !!localStorage.getItem(BIO_KEY)}catch(e){return false}}
+function bioAtivar(){
+  if(!bioPode()){toast('Este celular não oferece Face ID para apps da web.');return Promise.resolve(false)}
+  var u=S.fbUser||{};
+  return navigator.credentials.create({publicKey:{challenge:rnd(32),rp:{name:'Contas da Casa'},user:{id:rnd(16),name:u.email||'contas',displayName:quemSou()||'Contas da Casa'},
+    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},timeout:60000,attestation:'none'}})
+  .then(function(c){localStorage.setItem(BIO_KEY,b64(c.rawId));toast('🔒 Face ID ativado neste celular.');return true},function(e){toast('Face ID não ativado'+(e&&e.name==='NotAllowedError'?' (cancelado).':'.'));return false});
+}
+function bioDesativar(){try{localStorage.removeItem(BIO_KEY)}catch(e){}toast('Face ID desligado neste celular.')}
+function trancar(){
+  if(!bioAtivo()||document.getElementById('lock'))return;
+  var btn=h('button',{class:'b',style:'width:auto;padding:12px 28px;font-size:16px',onclick:function(){abrir()}},'Desbloquear com Face ID');
+  var L=h('div',{id:'lock'},h('img',{src:'icon-192.png',alt:'',style:'width:92px;height:92px;border-radius:22px;box-shadow:0 10px 40px rgba(138,43,226,.45)'}),
+    h('div',{style:'font-weight:800;font-size:20px;margin-top:16px'},'Contas da Casa'),h('div',{class:'mut',style:'margin:6px 0 26px;font-size:14px'},'🔒 Bloqueado'),btn);
+  document.body.appendChild(L);
+  function abrir(){btn.disabled=true;var id=localStorage.getItem(BIO_KEY);
+    navigator.credentials.get({publicKey:{challenge:rnd(32),allowCredentials:[{type:'public-key',id:unb64(id),transports:['internal']}],userVerification:'required',timeout:60000}})
+    .then(function(){L.classList.add('sai');setTimeout(function(){L.remove()},300)},function(){btn.disabled=false})}
+  setTimeout(abrir,350);
+}
+(function(){
+  trancar();var saiu=0;
+  document.addEventListener('visibilitychange',function(){if(document.hidden)saiu=Date.now();else if(saiu&&Date.now()-saiu>60000)trancar()});
+})();
+/* ---------- Tela do cartão (estilo app do banco) ---------- */
+function infoFatura(fo,ym){
+  var V=+((S.config.vencDia||{})['fatura:'+fo])||0;if(!V)return {V:0};
+  var C=V-7,fechaYm=ym;if(C<1){C+=30;fechaYm=ymAdd(ym,-1)}
+  var fecha=fechaYm+'-'+('0'+Math.min(C,28)).slice(-2),venc=ym+'-'+('0'+V).slice(-2);
+  var pago=!!(S.config.faturasPagas||{})[ym+'|'+fo],hj=today();
+  return {V:V,fecha:fecha,venc:venc,status:pago?'Paga':hj<fecha?'Aberta':hj<=venc?'Fechada':'Vencida',melhor:fecha};
+}
+function abreCartao(fo){
+  var ym=S.ym,c=calc(ym),itens=c.all.filter(function(x){return x.fonte===fo&&x.tipo==='despesa'});
+  var compras=itens.filter(function(x){return !x.prev&&!x.virt&&!x.proj&&!/\d+\s*\/\s*\d+/.test(x.desc||'')}),
+      parc=itens.filter(function(x){return !x.prev&&!x.virt&&(x.proj||/\d+\s*\/\s*\d+/.test(x.desc||''))}),
+      prev=itens.filter(function(x){return x.prev||x.virt});
+  var tot=sum(itens),f=infoFatura(fo,ym),mes=MESES[+ym.split('-')[1]-1];
+  var cor={Aberta:'#3b82f6',Fechada:'#e0a800',Paga:'var(--ok)',Vencida:'var(--bad)'}[f.status]||'var(--mut)';
+  var lista=h('div');var aba='compras';
+  function linha(x){return h('div',{class:'row',style:'cursor:pointer;min-height:0;padding:9px 0',onclick:function(){closeSheet();setTimeout(function(){if(x.proj){var p=S.parcelas.find(function(q){return q.id===x.pid});p&&openParc(p)}else if(x.prev||x.virt)editaRapido(x);else openForm(Object.assign({},x,{_ym:ym}))},220)}},
+    h('div',{class:'ic',style:'background:'+catColor(x.cat)+'22'},icon(x.cat)),h('div',{class:'grow'},h('div',{class:'t'},x.desc||'(sem descrição)'),h('div',{class:'s'},[x.cat,x.data?isoToBR(x.data).slice(0,5):''].filter(Boolean).join(' · '))),
+    h('div',{class:'v'},(x.valor<0?'−':'')+brlRaw(Math.abs(x.valor))))}
+  function mostra(){lista.replaceChildren();var arr=aba==='compras'?compras.slice().sort(function(a,b){return (b.data||'')<(a.data||'')?-1:1}):aba==='parc'?parc:prev;
+    if(!arr.length)lista.append(h('div',{class:'hint',style:'padding:12px 0'},aba==='prev'?'Nada previsto neste cartão.':'Nada aqui neste mês.'));arr.forEach(function(x){lista.append(linha(x))});
+    [].forEach.call(seg.children,function(b){b.classList.toggle('on',b._k===aba)})}
+  var seg=h('div',{class:'seg',style:'margin:12px 0 4px'});
+  [['compras','Compras ('+compras.length+')'],['parc','Parcelas ('+parc.length+')'],['prev','Previsto ('+prev.length+')']].forEach(function(o){var b=h('button',{type:'button',onclick:function(){aba=o[0];mostra()}},o[1]);b._k=o[0];seg.append(b)});
+  var porCat={};compras.concat(parc).forEach(function(x){porCat[x.cat||'Outros']=(porCat[x.cat||'Outros']||0)+(+x.valor||0)});
+  var top=Object.keys(porCat).sort(function(a,b){return porCat[b]-porCat[a]}).slice(0,3);
+  sheet([h('div',{style:'display:flex;align-items:center;gap:8px;margin-bottom:2px'},h('div',{class:'mut',style:'font-size:14px'},'Fatura de '+mes),f.V?h('span',{class:'tag',style:'background:'+cor+';color:#fff'},f.status):null),
+    h('div',{style:'font-size:32px;font-weight:800;letter-spacing:-.5px'},brl(tot)),
+    h('div',{class:'mut',style:'font-size:13px'},fo+(f.V?' · vence '+isoToBR(f.venc).slice(0,5)+' · melhor dia de compra '+isoToBR(f.melhor).slice(0,5):' · sem dia de vencimento (defina em A pagar)')),
+    top.length?h('div',{class:'hint',style:'margin:8px 0 0'},top.map(function(k){return icon(k)+' '+k+' '+brlRaw(porCat[k])}).join(' · ')):null,
+    h('div',{class:'chips',style:'margin-top:10px'},
+      h('button',{type:'button',class:'chip',onclick:function(){closeSheet();S.filtro={tipo:'',fonte:fo,pessoa:'',q:''};S.tab='extrato';render()}},'🏦 Bater com o banco'),
+      h('button',{type:'button',class:'chip',onclick:function(){closeSheet();S.tab='mais';S.sub='parcelas';render()}},'📆 Adiantar parcelas')),
+    seg,lista]);
+  mostra();
+}
 
 /* ---------- Parcelas ---------- */
 function fimParcela(p){return ymAdd(p.mes,p.total-(+p.atual||1))}
