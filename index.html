@@ -112,7 +112,7 @@ main{flex:1 0 auto;width:100%;box-sizing:border-box}
 .bar i{display:block;height:100%;border-radius:4px}
 .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#e8eefc;color:#2e4db3;margin-left:5px;vertical-align:2px;font-weight:600}
 .tag.w{background:#fdf0dc;color:#9a620f}.tag.g{background:#dff3e9;color:#0f6e48}
-.dhead{font-size:12px;font-weight:700;color:var(--mut);margin:14px 4px 4px;text-transform:uppercase}
+.dhead{font-size:14px;font-weight:600;color:var(--mut);margin:18px 4px 8px;text-transform:none}
 .b{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-size:15px;cursor:pointer;font-weight:700;min-height:46px}
 .b.sec{background:var(--chip);color:var(--tx)}
 .b.red{background:var(--bad)}
@@ -216,6 +216,7 @@ details.pr>summary::-webkit-details-marker{display:none}
 .it:last-child{border-bottom:0}
 .it .n{color:var(--mut);font-size:12px;width:26px}
 .it .x{border:0;background:var(--chip);width:34px;height:34px;border-radius:10px;cursor:pointer}
+details.pr>summary,details.bloco>summary{color:inherit}
 details summary{cursor:pointer;color:var(--acc);font-weight:600;padding:8px 0;min-height:40px;list-style:none}
 details summary::-webkit-details-marker{display:none}
 </style>
@@ -237,7 +238,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.35';
+const APP_VERSION = 'v2026.11.25.1';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -823,7 +824,7 @@ function abrePossoComprar(){
   var fD=h('input',{type:'text',placeholder:'O que é? (ex.: Tênis, Berço)',autocomplete:'off'});
   var st={n:1,fonte:(S.config.fontes||[])[0]||''};
   var res=h('div',{style:'margin-top:8px'});
-  var nChips=chips([1,2,3,4,5,6,10,12].map(function(n){return [n,n===1?'À vista':n+'x']}),1,function(v){st.n=v;simula()},true);
+  var nChips=chips([1,2,3,4,5,6,10,12].map(function(n){return [n,n===1?'À vista':n+'x']}),1,function(v){st.n=v;simula()});
   function simula(){
     res.innerHTML='';var v=parseVal(fV.value);if(!v){res.append(h('div',{class:'hint'},'Digite o valor para ver o efeito nos próximos meses.'));return}
     var ini=ehCartao(st.fonte)?mesDaFatura(st.fonte,today()):(ymNow()<INICIO?INICIO:ymNow());
@@ -876,7 +877,7 @@ function vAssin(root){
   var L=assinaturas(),tot=L.reduce(function(a,r){return a+r.valor},0);
   root.append(h('div',{class:'hero',style:'padding:14px 16px'},h('small',null,'Por mês'),h('div',{class:'big',style:'font-size:30px'},brl(tot)),h('div',{class:'cmp'},'Por ano: '+brl(tot*12)+' · '+L.length+' cobranças')));
   var c=h('div',{class:'card',style:'padding:2px 12px'});
-  L.forEach(function(r){c.append(h('div',{class:'row'},h('div',{class:'ic',style:'background:var(--chip)'},icon(r.cat)),h('div',{class:'grow'},h('div',{class:'t'},r.nome),h('div',{class:'s'},(r.fonte||'')+' · '+brl(r.valor*12)+' por ano')),h('div',{class:'v'},brl(r.valor))))});
+  L.forEach(function(r){c.append(h('div',{class:'row'},h('div',{class:'ic',style:'background:var(--chip)'},icon(r.cat)),h('div',{class:'grow'},h('div',{class:'t'},r.nome),h('div',{class:'s'},(r.fonte||'')+' · '+brl(r.valor*12)+'/ano')),h('div',{class:'v'},brl(r.valor))))});
   if(!L.length)c.append(h('div',{class:'empty'},'Nenhuma assinatura encontrada ainda. Importe uma fatura para o app achar.'));
   root.append(c);
   root.append(h('div',{class:'hint'},'O app acha sozinho nas faturas importadas: serviços conhecidos (Spotify, Claude, iFood Club, seguro, internet…) e cobranças que aparecem em mais de um mês. Para cortar, cancele no app do serviço e tire a linha prevista do mês.'));
@@ -950,7 +951,7 @@ function qb(e,l,fn){return h('button',{type:'button',onclick:fn},h('span',{class
 function lrow(x,showVenc){
   var tags=[];if(x.fixa)tags.push(h('span',{class:'tag'},'fixa'));if(x.proj)tags.push(h('span',{class:'tag w'},'parcela'));if(x.orig==='fatura')tags.push(h('span',{class:'tag g'},'fatura'));if(x.tipo==='investimento')tags.push(h('span',{class:'tag g'},'invest.'));if(x.lembrete)tags.push(h('span',{class:'tag'},'🔔'));if(x.itens&&x.itens.length)tags.push(h('span',{class:'tag'},'🧾'));if(x.codigo)tags.push(h('span',{class:'tag'},x.orig==='pix'?'pix':'código'));
   var atras=x.venc&&!x.pago&&x.venc<today();
-  var sub=[x.cat||'—',x.fonte||'',x.pessoa||''].filter(Boolean).join(' · ');
+  var sub=[x.cat||'—',x.fonte||'',x.pessoa&&x.pessoa!=='Casal'?x.pessoa:''].filter(Boolean).join(' · ');
   if(showVenc&&x.venc)sub=(atras?'⚠️ venceu ':'vence ')+isoToBR(x.venc)+' · '+sub;
   var canCk=!x.proj&&x.tipo!=='receita'&&x.orig!=='fatura';
   return h('div',{class:'row'},
@@ -979,7 +980,7 @@ function vExtrato(root){
   // Um filtro só por vez: tipo (chips) + cartão/conta (uma caixa de seleção)
   var fontesUsadas={};c.all.forEach(function(x){if(x.fonte)fontesUsadas[x.fonte]=1});
   var opcoes=S.config.fontes.filter(function(x){return fontesUsadas[x]||x===f.fonte});
-  var sel=h('select',{class:'selpill'+(f.fonte?' on':''),onchange:function(e){f.fonte=e.target.value;f.pessoa='';render()}},h('option',{value:''},'💳 Todos os cartões e contas'));
+  var sel=h('select',{class:'selpill'+(f.fonte?' on':''),onchange:function(e){f.fonte=e.target.value;f.pessoa='';render()}},h('option',{value:''},'Todos os cartões e contas'));
   opcoes.forEach(function(x){var o=h('option',{value:x},x);if(x===f.fonte)o.selected=true;sel.append(o)});
   root.append(h('div',{class:'filtros'},chips([['','Tudo'],['despesa','Gastos'],['receita','Entradas'],['investimento','🐷 Guardado']],f.tipo,function(v){f.tipo=v;render()},true),sel));
   var busca=function(x){if(!f.q)return true;var t=((x.desc||'')+' '+(x.cat||'')+' '+(x.itens||[]).map(function(i){return i.n||''}).join(' ')).toLowerCase();return t.indexOf(f.q.toLowerCase())>=0};
@@ -1597,7 +1598,7 @@ function abreEntraSai(tipo){
     h('div',{class:'v '+(tipo==='receita'?'pos':'')},brl(x.valor)))};
   var barra=function(v){var p=tot?Math.round(v/tot*100):0;return h('div',{class:'bar',style:'margin-top:4px'},h('i',{style:'width:'+p+'%;background:'+(tipo==='receita'?'var(--ok)':'var(--acc)')}))};
   if(tipo==='receita'){
-    lista.sort(function(a,b){return b.valor-a.valor}).forEach(function(x){var r=linha(x,[x.cat,x.pessoa&&x.pessoa!=='Casal'?x.pessoa:'',(tot?Math.round(x.valor/tot*100):0)+'% do que entra'].filter(Boolean).join(' · '));box.append(r)});
+    lista.sort(function(a,b){return b.valor-a.valor}).forEach(function(x){var r=linha(x,[x.cat,x.pessoa&&x.pessoa!=='Casal'?x.pessoa:'',(tot?Math.round(x.valor/tot*100):0)+'%'].filter(Boolean).join(' · '));box.append(r)});
     if(!lista.length)box.append(h('div',{class:'hint'},'Nada entrando neste mês ainda.'));
   }else{
     var grupos={},soltas=[];
@@ -1609,7 +1610,7 @@ function abreEntraSai(tipo){
       var reais=b.itens.filter(function(x){return !x.prev&&!x.virt}),prev=b.itens.filter(function(x){return x.prev||x.virt});
       var d=h('details',{class:'pr'},h('summary',{class:'row',style:'list-style:none;cursor:pointer;min-height:0;padding:8px 0'},
         h('div',{class:'ic',style:'background:var(--chip)'},'💳'),
-        h('div',{class:'grow'},h('div',{class:'t'},b.k+' ▾'),h('div',{class:'s'},b.itens.length+' lançamento'+(b.itens.length>1?'s':'')+(prev.length?' · '+prev.length+' previsto'+(prev.length>1?'s':''):'')+' · '+(tot?Math.round(b.v/tot*100):0)+'%'),barra(b.v)),
+        h('div',{class:'grow'},h('div',{class:'t'},b.k),h('div',{class:'s'},b.itens.length+' lançamento'+(b.itens.length>1?'s':'')+(prev.length?' · '+prev.length+' previsto'+(prev.length>1?'s':''):'')+' · '+(tot?Math.round(b.v/tot*100):0)+'%'),barra(b.v)),
         h('div',{class:'v'},brl(b.v))));
       var porCat={};b.itens.forEach(function(x){var k=x.cat||'Outros';porCat[k]=(porCat[k]||0)+(+x.valor||0)});
       var cats=Object.keys(porCat).sort(function(p,q){return porCat[q]-porCat[p]});
