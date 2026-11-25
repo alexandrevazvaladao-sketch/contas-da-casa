@@ -156,6 +156,10 @@ td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .quick button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;min-height:68px}
 .quick .e{font-size:22px}
 .search{margin-bottom:10px}
+.filtros{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}.filtros .chips{margin:0}
+.selpill{width:100%;appearance:none;-webkit-appearance:none;background:var(--chip);color:var(--tx);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font:inherit;font-size:14px;font-weight:600}
+.selpill.on{border-color:var(--acc);color:var(--acc)}:root[data-tema="escuro"] .selpill.on{color:#c9a4ff}
+details.bloco>summary{list-style:none;cursor:pointer}details.bloco>summary::-webkit-details-marker{display:none}
 
 .mtot{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
 .disp{background:var(--card);border:2px solid var(--acc);border-radius:16px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -167,6 +171,9 @@ td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pad button{height:58px;border-radius:14px;border:1px solid var(--line);background:var(--card);font-size:24px;font-weight:700;cursor:pointer;touch-action:manipulation}
 .pad button:active{background:var(--chip)}
 .addbig{width:100%;height:60px;font-size:19px;border-radius:16px;margin-bottom:12px}
+.ptag{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--chip);color:var(--mut)}.ptag.up{color:var(--bad)}.ptag.down{color:var(--ok)}
+details.nota{background:var(--chip);border-radius:12px;padding:8px 12px;margin:10px 0}details.nota>summary{font-weight:700;cursor:pointer}
+details.pr>summary::-webkit-details-marker{display:none}
 .it{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .it:last-child{border-bottom:0}
 .it .n{color:var(--mut);font-size:12px;width:26px}
@@ -191,7 +198,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.9';
+const APP_VERSION = 'v2026.11.24.10';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -643,7 +650,7 @@ function render(){
   if(!ok){vLock(root);return}
   if(S.pendNovo){S.pendNovo=false;setTimeout(function(){openForm(null)},50)}
   var fn={inicio:vInicio,extrato:vExtrato,pagar:vPagar,mais:vMais,mercado:vMercado,guardado:vGuardado}[S.tab];
-  if(S.tab==='mais'&&S.sub)fn={assinaturas:vAssin,parcelas:vParc,fatura:vFat,boletos:vBol,ajustes:vCfg,pessoas:vPessoas,exportar:vExport}[S.sub]||vMais;
+  if(S.tab==='mais'&&S.sub)fn={precos:vPrecos,assinaturas:vAssin,parcelas:vParc,fatura:vFat,boletos:vBol,ajustes:vCfg,pessoas:vPessoas,exportar:vExport}[S.sub]||vMais;
   fn(root);
 }
 function softRender(){if(!$('#modal').children.length&&!(S.tab==='mais'&&(S.sub==='fatura'||S.sub==='boletos'||S.sub==='ajustes')))render();else updateHeader()}
@@ -899,7 +906,7 @@ function cardDelivery(){
 function qb(e,l,fn){return h('button',{type:'button',onclick:fn},h('span',{class:'e'},e),l)}
 
 function lrow(x,showVenc){
-  var tags=[];if(x.fixa)tags.push(h('span',{class:'tag'},'fixa'));if(x.proj)tags.push(h('span',{class:'tag w'},'parcela'));if(x.orig==='fatura')tags.push(h('span',{class:'tag g'},'fatura'));if(x.tipo==='investimento')tags.push(h('span',{class:'tag g'},'invest.'));if(x.lembrete)tags.push(h('span',{class:'tag'},'🔔'));if(x.codigo)tags.push(h('span',{class:'tag'},x.orig==='pix'?'pix':'código'));
+  var tags=[];if(x.fixa)tags.push(h('span',{class:'tag'},'fixa'));if(x.proj)tags.push(h('span',{class:'tag w'},'parcela'));if(x.orig==='fatura')tags.push(h('span',{class:'tag g'},'fatura'));if(x.tipo==='investimento')tags.push(h('span',{class:'tag g'},'invest.'));if(x.lembrete)tags.push(h('span',{class:'tag'},'🔔'));if(x.itens&&x.itens.length)tags.push(h('span',{class:'tag'},'🧾'));if(x.codigo)tags.push(h('span',{class:'tag'},x.orig==='pix'?'pix':'código'));
   var atras=x.venc&&!x.pago&&x.venc<today();
   var sub=[x.cat||'—',x.fonte||'',x.pessoa||''].filter(Boolean).join(' · ');
   if(showVenc&&x.venc)sub=(atras?'⚠️ venceu ':'vence ')+isoToBR(x.venc)+' · '+sub;
@@ -925,20 +932,47 @@ function copiarFixas(){
 /* ---------- Extrato ---------- */
 function vExtrato(root){
   var f=S.filtro,c=calc(S.ym);
-  var q=h('input',{type:'search',class:'search',placeholder:'🔎 Buscar descrição ou categoria',value:f.q,oninput:function(e){f.q=e.target.value;clearTimeout(vExtrato._t);vExtrato._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},350)}});
+  var q=h('input',{type:'search',class:'search',placeholder:'🔎 Buscar (ex.: mercado, ifood, leite)',value:f.q,oninput:function(e){f.q=e.target.value;clearTimeout(vExtrato._t);vExtrato._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},350)}});
   root.append(q);
-  root.append(chips([['','Tudo'],['despesa','Despesas'],['receita','Receitas'],['investimento','Invest.']],f.tipo,function(v){f.tipo=v;render()},true));
-  root.append(chips([['','Todos']].concat(S.config.pessoas.map(function(x){return [x,x]})).concat(S.config.fontes.map(function(x){return ['f:'+x,'💳 '+x]})),f.fonte?'f:'+f.fonte:f.pessoa,function(v){if(v.indexOf('f:')===0){f.fonte=v.slice(2);f.pessoa=''}else{f.pessoa=v;f.fonte=''}render()},true));
-  var list=c.all.filter(function(x){return (!f.tipo||x.tipo===f.tipo)&&(!f.fonte||x.fonte===f.fonte)&&(!f.pessoa||x.pessoa===f.pessoa)&&(!f.q||((x.desc||'')+' '+(x.cat||'')).toLowerCase().indexOf(f.q.toLowerCase())>=0)});
-  if(!list.length){root.append(h('div',{class:'card empty'},'Nenhum lançamento aqui.'));return}
-  var tot=sum(list.filter(function(x){return x.tipo!=='receita'})),totR=sum(list.filter(function(x){return x.tipo==='receita'}));
-  root.append(h('div',{class:'hint',style:'margin:0 4px 4px'},list.length+' itens · saídas '+brl(tot)+(totR?' · entradas '+brl(totR):'')));
-  var g={};list.forEach(function(x){var k=x.data||x.venc||'';(g[k]=g[k]||[]).push(x)});
-  Object.keys(g).sort(function(a,b){if(!a)return 1;if(!b)return -1;return a<b?1:-1}).forEach(function(k){
-    var items=g[k];var dt=sum(items.filter(function(x){return x.tipo!=='receita'}));
+  // Um filtro só por vez: tipo (chips) + cartão/conta (uma caixa de seleção)
+  var fontesUsadas={};c.all.forEach(function(x){if(x.fonte)fontesUsadas[x.fonte]=1});
+  var opcoes=S.config.fontes.filter(function(x){return fontesUsadas[x]||x===f.fonte});
+  var sel=h('select',{class:'selpill'+(f.fonte?' on':''),onchange:function(e){f.fonte=e.target.value;f.pessoa='';render()}},h('option',{value:''},'💳 Todos os cartões e contas'));
+  opcoes.forEach(function(x){var o=h('option',{value:x},x);if(x===f.fonte)o.selected=true;sel.append(o)});
+  root.append(h('div',{class:'filtros'},chips([['','Tudo'],['despesa','Gastos'],['receita','Entradas'],['investimento','🐷 Guardado']],f.tipo,function(v){f.tipo=v;render()},true),sel));
+  var busca=function(x){if(!f.q)return true;var t=((x.desc||'')+' '+(x.cat||'')+' '+(x.itens||[]).map(function(i){return i.n||''}).join(' ')).toLowerCase();return t.indexOf(f.q.toLowerCase())>=0};
+  var list=c.all.filter(function(x){return (!f.tipo||x.tipo===f.tipo)&&(!f.fonte||x.fonte===f.fonte)&&busca(x)});
+  var ehPrev=function(x){return !!(x.prev||x.virt)};
+  var prev=list.filter(ehPrev),parc=list.filter(function(x){return !ehPrev(x)&&x.proj}),real=list.filter(function(x){return !ehPrev(x)&&!x.proj});
+  if(f.fonte||f.tipo||f.q)root.append(h('button',{class:'b sec',style:'width:auto;padding:6px 12px;font-size:13px;margin:0 0 8px',onclick:function(){S.filtro={tipo:'',fonte:'',pessoa:'',q:''};render()}},'✕ Limpar filtro'));
+  if(!list.length){root.append(h('div',{class:'card empty'},'Nada aqui'+(f.fonte?' em '+f.fonte:'')+' neste mês.'));return}
+  var saidas=function(a){return sum(a.filter(function(x){return x.tipo!=='receita'}))};
+  var resumo=h('div',{class:'card',style:'padding:10px 14px'});
+  resumo.append(h('div',{class:'row',style:'min-height:0;padding:4px 0'},h('div',{class:'grow'},h('b',null,f.fonte?'Já lançado em '+f.fonte:'Já lançado'),h('div',{class:'s'},real.length?real.length+' lançamento'+(real.length===1?'':'s'):'nada lançado ainda')),h('div',{class:'v'},brl(saidas(real)))));
+  if(parc.length)resumo.append(h('div',{class:'row',style:'min-height:0;padding:4px 0'},h('div',{class:'grow'},'Parcelas do mês'),h('div',{class:'v'},brl(sum(parc)))));
+  if(prev.length)resumo.append(h('div',{class:'row',style:'min-height:0;padding:4px 0'},h('div',{class:'grow mut'},'Previsto, ainda não aconteceu'),h('div',{class:'v mut'},brl(saidas(prev)))));
+  var entr=sum(list.filter(function(x){return x.tipo==='receita'}));
+  if(entr)resumo.append(h('div',{class:'row',style:'min-height:0;padding:4px 0'},h('div',{class:'grow'},'Entradas'),h('div',{class:'v pos'},'+'+brl(entr))));
+  root.append(resumo);
+  // 1) O que já aconteceu, por dia
+  var g={},semDia=[];real.forEach(function(x){if(x.data)(g[x.data]=g[x.data]||[]).push(x);else semDia.push(x)});
+  Object.keys(g).sort(function(a,b){return a<b?1:-1}).forEach(function(k){
+    var items=g[k];var dt=saidas(items);
     root.append(h('div',{class:'dhead'},dayLabel(k)+(dt?' · '+brl(dt):'')));
     var cd=h('div',{class:'card',style:'padding:2px 12px'});items.forEach(function(x){cd.append(lrow(x,false))});root.append(cd);
   });
+  if(semDia.length){
+    root.append(h('div',{class:'dhead'},'Contas do mês · '+brl(saidas(semDia))));
+    var cd=h('div',{class:'card',style:'padding:2px 12px'});semDia.sort(function(a,b){return (b.valor||0)-(a.valor||0)}).forEach(function(x){cd.append(lrow(x,true))});root.append(cd);
+  }
+  // 2) Parcelas e previstos ficam separados e fechados
+  function bloco(titulo,arr,dica){
+    var d=h('details',{class:'card bloco',style:'padding:2px 12px'},h('summary',{class:'dhead',style:'margin:10px 0'},titulo+' · '+brl(saidas(arr))+' ▾'));
+    if(dica)d.append(h('div',{class:'hint',style:'margin:0 0 6px'},dica));
+    arr.slice().sort(function(a,b){return (b.valor||0)-(a.valor||0)}).forEach(function(x){d.append(lrow(x,true))});root.append(d);
+  }
+  if(parc.length)bloco('📆 Parcelas deste mês ('+parc.length+')',parc);
+  if(prev.length)bloco('⏳ Previsto ('+prev.length+')',prev,'Valores estimados que ainda não aconteceram. Quando você lança o gasto de verdade, ele desconta daqui.');
 }
 
 /* ---------- A pagar ---------- */
@@ -1039,7 +1073,7 @@ function vMais(root){
   root.append(h('div',{class:'card',style:'padding:12px 14px'},h('h3',null,'🎨 Aparência'),
     chips([['escuro','🌙 Escuro'],['claro','☀️ Claro'],['auto','📱 Igual ao celular']],tema,function(v){pref('tema',v);document.documentElement.setAttribute('data-tema',v);try{document.querySelector('meta[name="theme-color"]').setAttribute('content',v==='escuro'?'#000000':'#16233d')}catch(e){}render()}),
     h('div',{class:'hint',style:'margin:-6px 0 0'},'Vale só para este celular.')));
-  var items=[['🤔','Posso comprar isso?','Simula a compra (à vista ou parcelada) nos próximos meses','__posso'],['🔁','Assinaturas e fixas','O que se repete todo mês e quanto dá por ano','assinaturas'],['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
+  var items=[['🤔','Posso comprar isso?','Simula a compra (à vista ou parcelada) nos próximos meses','__posso'],['🔁','Assinaturas e fixas','O que se repete todo mês e quanto dá por ano','assinaturas'],['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['🏷️','Preços dos produtos','Histórico de preço das notas lidas','precos'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
   var cd=h('div',{class:'card menu',style:'padding:2px 12px'});
   items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
   root.append(cd);
@@ -1113,7 +1147,7 @@ function openForm(item,draft){
   var defData=S.ym===ymNow()?today():S.ym+'-01';
   var it=Object.assign({tipo:'despesa',desc:'',valor:'',cat:S.last.cat||'',fonte:S.last.fonte||S.config.fontes[0]||'',pessoa:S.last.pessoa||'Casal',venc:'',pago:false,fixa:false,data:defData},item||d0||{});
   if(item&&!item.data)it.data='';
-  var st={tipo:it.tipo,cat:it.cat,fonte:it.fonte,pessoa:it.pessoa};
+  var st={tipo:it.tipo,cat:it.cat,fonte:it.fonte,pessoa:it.pessoa,fotos:[],notaData:false};
   var seg=h('div',{class:'seg'});
   [['despesa','Gasto','d'],['receita','Entrou dinheiro','r'],['investimento','🐷 Guardar','i']].forEach(function(o){var b=h('button',{type:'button',class:(st.tipo===o[0]?'on ':'')+o[2],onclick:function(){var mud=st.tipo!==o[0];st.tipo=o[0];[].forEach.call(seg.children,function(c){c.classList.remove('on')});b.classList.add('on');if(mud){st.cat=o[0]==='receita'?'Renda extra':o[0]==='investimento'?'Reserva de emergência':(S.last.cat||'');var n2=catChips();catW.replaceWith(n2);catW=n2}ajustaTipo()}},o[1]);seg.append(b)});
   var fVal=h('input',{type:'text',inputmode:'decimal',value:it.valor===''?'':String(it.valor).replace('.',','),placeholder:'0,00',autocomplete:'off'});
@@ -1144,15 +1178,17 @@ function openForm(item,draft){
     if(!o.valor){toast('Digite o valor.');fVal.focus();return}
     if(!o.id){o.id=uid();o.orig='manual'}
     var ym=(o.orig==='fatura'&&ymOrig)?ymOrig:((o.data||o.venc||'').slice(0,7)||ymOrig||S.ym);
+    if(st.notaData&&o.data&&!ymOrig){ym=ehCartao(o.fonte)?mesDaFatura(o.fonte,o.data):o.data.slice(0,7);if(ym<INICIO)ym=INICIO}
+    if(st.fotos.length)o.nota=true;
     if(ymOrig&&ymOrig!==ym)setMonth(ymOrig,monthLanc(ymOrig).filter(function(x){return x.id!==o.id}));
     var L=monthLanc(ym).slice();var i=L.findIndex(function(x){return x.id===o.id});if(i>=0)L[i]=o;else L.push(o);
     if(o.fixa&&o.venc){var vd2=Object.assign({},S.config.vencDia||{});vd2[o.desc]=+o.venc.slice(8);S.config.vencDia=vd2;saveConfig()}
-    setMonth(ym,L);S.last={cat:o.cat,fonte:o.fonte,pessoa:o.pessoa};pref('last',S.last);vib();
+    setMonth(ym,L);if(st.fotos.length)salvaFotoNota(o.id,st.fotos);S.last={cat:o.cat,fonte:o.fonte,pessoa:o.pessoa};pref('last',S.last);vib();
     toast((item?'Atualizado: ':'Salvo: ')+(o.desc||'lançamento')+' '+brlRaw(o.valor)+(ym!==S.ym?' em '+ymLabel(ym):''));
     if(again){closeSheet();render();openForm(null)}else{closeSheet();render()}
   }
   var foot=h('div',{class:'foot'},
-    item?h('button',{class:'b red',style:'flex:0 0 auto',onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Confirmar?';return}setMonth(ymOrig,monthLanc(ymOrig).filter(function(x){return x.id!==it.id}));closeSheet();toast('Excluído.');render()}},'🗑'):h('button',{class:'b sec',onclick:function(){doSave(true)}},'Salvar e +1'),
+    item?h('button',{class:'b red',style:'flex:0 0 auto',onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Confirmar?';return}setMonth(ymOrig,monthLanc(ymOrig).filter(function(x){return x.id!==it.id}));if(it.nota&&db)try{db.doc('contas/nota_'+it.id).delete().catch(function(){})}catch(_){}closeSheet();toast('Excluído.');render()}},'🗑'):h('button',{class:'b sec',onclick:function(){doSave(true)}},'Salvar e +1'),
     h('button',{class:'b',onclick:function(){doSave(false)}},'Salvar'));
   var nta=h('textarea',{placeholder:'Cole aqui o aviso do banco. Ex.: Compra de R$ 45,90 APROVADA em IFOOD',style:'min-height:70px'});
   var notif=item?null:h('details',d0&&d0._notif?{}:{},h('summary',null,'📋 Colar aviso do banco (notificação, e-mail, SMS)'),nta,h('div',{style:'height:8px'}),
@@ -1169,26 +1205,145 @@ function openForm(item,draft){
   function ajustaTipo(){
     var t=st.tipo;
     lblCat.style.display=t==='investimento'?'none':'';lblCat.textContent=t==='receita'?'De onde veio':'Categoria';
-    blocoFonte.style.display=t==='despesa'?'':'none';
+    blocoFonte.style.display=t==='despesa'?'':'none';notaW.style.display=t==='despesa'?'':'none';
     fDesc.placeholder=t==='receita'?'Ex.: Freela, venda do berço, reembolso':t==='investimento'?'Para quê? (ex.: Reserva, Enxoval da Agnes)':'Descrição (ex.: Energia, Mercado)';
     dicaTipo.textContent=t==='receita'?'Entra no resultado do mês. Se quiser deixar esse dinheiro guardado, lance também em 🐷 Guardar.':t==='investimento'?'Sai do resultado do mês e vai para o 🐷 Guardado, que cobre meses negativos depois.':'';
     dicaTipo.style.display=t==='despesa'?'none':'';
   }
+  var notaIn=h('input',{type:'file',accept:'image/*',multiple:true,style:'display:none',onchange:function(e){var fs=[].slice.call(e.target.files||[]);e.target.value='';if(fs.length)lerFoto(fs)}});
+  var notaBtn=h('button',{type:'button',class:'b sec full notabtn',onclick:function(){notaIn.click()}},it.itens&&it.itens.length?'📷 Trocar nota fiscal':'📷 Ler nota fiscal (só a foto)');
+  var notaInfo=h('div');
+  var notaW=h('div',{style:'margin:0 0 12px'},notaIn,notaBtn,notaInfo);
+  function mostraItens(aberto){notaInfo.replaceChildren();var b=boxItens(it,aberto);if(b)notaInfo.append(b)}
+  function lerFoto(fs){
+    notaBtn.disabled=true;notaBtn.textContent='⏳ Lendo a nota… (uns segundos)';S.lendoNota=true;
+    Promise.all(fs.slice(0,3).map(fotoPequena)).catch(function(){return []}).then(function(fotos){
+      return lerNotaForm(fs).then(function(r){
+        S.lendoNota=false;notaBtn.disabled=false;notaBtn.textContent='📷 Trocar nota fiscal';
+        st.fotos=fotos;st.notaData=!!r.data;it.itens=r.itens;it.loja=r.loja;if(fotos.length)it.nota=true;
+        if(r.total>0)fVal.value=String(r.total.toFixed(2)).replace('.',',');
+        if(r.loja&&(!fDesc.value.trim()||!item))fDesc.value=r.loja;
+        if(r.cat){st.cat=r.cat;var n=catChips();catW.replaceWith(n);catW=n}
+        if(r.data)fData.value=r.data;
+        var ym=r.data?(ehCartao(st.fonte)?mesDaFatura(st.fonte,r.data):r.data.slice(0,7)):'';if(ym&&ym<INICIO)ym=INICIO;
+        mostraItens(true);
+        notaInfo.prepend(h('div',{class:'hint',style:'margin:8px 0 0'},'✓ Lido'+(r.loja?' · '+r.loja:'')+(r.data?' · compra em '+isoToBR(r.data):'')+(ym&&!item?' · entra em '+ymLabel(ym)+(ehCartao(st.fonte)?' (fatura '+st.fonte+')':''):'')+(fotos.length?' · foto anexada':'')+'. Confira o valor e salve.'));
+        vib();
+      });
+    }).catch(function(e){S.lendoNota=false;notaBtn.disabled=false;notaBtn.textContent='📷 Ler nota fiscal (só a foto)';try{console.warn('[nota]',e&&e.code,e&&e.message||e)}catch(_){}toast(msgErroNota(e))});
+  }
+  mostraItens(false);
   setTimeout(ajustaTipo,0);
-  sheet([h('h2',null,item?'Editar lançamento':'Novo lançamento'),seg,
+  sheet([h('h2',null,item?'Editar lançamento':'Novo lançamento'),seg,notaW,
     h('div',{class:'amt'},h('span',null,'R$'),fVal),
     fDesc,h('div',{style:'height:12px'}),
     lblCat,catW,
     blocoFonte,
     dicaTipo,
     det,
-    it.itens&&it.itens.length?(function(){var dd=h('details',null,h('summary',null,'🧾 '+it.itens.length+' itens da compra ▾'));it.itens.forEach(function(x){dd.append(h('div',{class:'it'},h('div',{style:'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},(x.n||'Item')+((x.q||1)>1?' ('+x.q+'×'+brlRaw(x.v)+')':'')),h('b',null,brlRaw(x.v*(x.q||1)))))});return dd})():null,
+    null,
     it.venc?h('a',{class:'b sec full',style:'display:block;text-align:center;text-decoration:none;margin-top:8px;line-height:22px',target:'_blank',rel:'noopener',href:'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('💸 Pagar: '+(it.desc||'conta')+' · '+brlRaw(it.valor||0))+'&dates='+it.venc.replace(/-/g,'')+'/'+dPlus(it.venc).replace(/-/g,'')+'&details='+encodeURIComponent('Contas da Casa')},'🔔 Lembrar no Google Agenda'):null,
     it.codigo?h('button',{type:'button',class:'b sec full',style:'margin-top:8px',onclick:function(){
       try{navigator.clipboard.writeText(it.codigo).then(function(){toast('Código copiado. Cole no app do banco para pagar.')},function(){toast('Não consegui copiar.')})}catch(e){toast('Não consegui copiar.')}
     }},'📋 Copiar código para pagar no banco'):null,
     notif,foot]);
   if(!item&&!d0)setTimeout(function(){try{fVal.focus()}catch(e){}},250);
+}
+
+/* ---------- Nota fiscal no lançamento: leitura, foto e preços ---------- */
+function normItem(n){return String(n||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function totItem(i){return i.t!=null?+i.t:(+i.v||0)*(+i.q||1)}
+function historicoPrecos(){
+  var m={};Object.keys(S.months).forEach(function(ym){monthLanc(ym).forEach(function(x){(x.itens||[]).forEach(function(i){
+    var k=normItem(i.n);if(!k||/^descontos?$/.test(k)||!(+i.v>0))return;
+    (m[k]=m[k]||[]).push({n:i.n,v:+i.v,q:+i.q||1,data:x.data||ym+'-01',loja:x.loja||x.desc||'',id:x.id});
+  })})});
+  Object.keys(m).forEach(function(k){m[k].sort(function(a,b){return a.data<b.data?-1:a.data>b.data?1:0})});
+  return m;
+}
+function precoAnterior(H,i,lanc){var a=(H[normItem(i.n)]||[]).filter(function(e){return e.id!==lanc.id&&e.data<=(lanc.data||'9999-12-31')});return a.length?a[a.length-1]:null}
+function tagPreco(i,ant){
+  if(!ant||!(+i.v>0))return null;var d=Math.round((+i.v-ant.v)*100)/100;var pc=ant.v?Math.round(d/ant.v*100):0;
+  var quando=ant.data?isoToBR(ant.data).slice(0,5):'';
+  if(Math.abs(d)<0.01)return h('span',{class:'ptag'},'= igual '+quando);
+  return h('span',{class:'ptag '+(d>0?'up':'down')},(d>0?'▲ +':'▼ −')+brlRaw(Math.abs(d))+(pc?' ('+(d>0?'+':'−')+Math.abs(pc)+'%)':'')+' vs '+quando);
+}
+function boxItens(lanc,aberto){
+  var its=lanc.itens||[];if(!its.length&&!lanc.nota)return null;
+  var H=historicoPrecos(),subiu=0,desceu=0;
+  var lista=h('div');
+  its.forEach(function(i){
+    var ant=/^descontos?$/.test(normItem(i.n))?null:precoAnterior(H,i,lanc);
+    if(ant&&+i.v>ant.v+0.009)subiu++;else if(ant&&+i.v<ant.v-0.009)desceu++;
+    var q=+i.q||1;
+    lista.append(h('div',{class:'it'},h('div',{style:'flex:1;min-width:0'},
+      h('div',{style:'overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},i.n||'Item'),
+      h('div',{class:'mut',style:'font-size:12px;display:flex;gap:6px;flex-wrap:wrap'},q!==1?h('span',null,(Math.round(q*1000)/1000).toString().replace('.',',')+' × '+brlRaw(i.v)):null,tagPreco(i,ant))),
+      h('b',{class:totItem(i)<0?'pos':''},(totItem(i)<0?'−':'')+brlRaw(Math.abs(totItem(i))))));
+  });
+  var resumo=its.length+' itens'+(subiu?' · '+subiu+' mais caro'+(subiu>1?'s':''):'')+(desceu?' · '+desceu+' mais barato'+(desceu>1?'s':''):'');
+  var d=h('details',aberto?{class:'nota',open:true}:{class:'nota'},h('summary',null,'🧾 Nota fiscal · '+resumo+' ▾'),lista);
+  if(lanc.nota)d.append(h('button',{type:'button',class:'b sec full',style:'margin-top:8px',onclick:function(){verFotoNota(lanc.id)}},'🖼️ Ver foto da nota'));
+  if(subiu||desceu)d.append(h('div',{class:'hint'},'▲▼ comparam com a última vez que vocês compraram o mesmo produto. Veja tudo em ☰ → Preços dos produtos.'));
+  return d;
+}
+function fotoPequena(f){return new Promise(function(ok,bad){var img=new Image();var u=URL.createObjectURL(f);img.onload=function(){var m=1100,w=img.naturalWidth,hh=img.naturalHeight,k=Math.min(1,m/Math.max(w,hh));var c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(hh*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);var qq=0.6,d=c.toDataURL('image/jpeg',qq);while(d.length>420000&&qq>0.25){qq-=0.1;d=c.toDataURL('image/jpeg',qq)}ok(d)};img.onerror=function(){URL.revokeObjectURL(u);bad({code:'image_rejected'})};img.src=u})}
+function salvaFotoNota(id,fotos){
+  if(!db||!fotos||!fotos.length)return;var tot=0,ok=[];fotos.forEach(function(f){if(tot+f.length<900000){ok.push(f);tot+=f.length}});
+  try{db.doc('contas/nota_'+id).set({imgs:ok,upd:Date.now()}).catch(function(){toast('Não consegui guardar a foto da nota.')})}catch(e){}
+}
+function verFotoNota(id){
+  if(!db){toast('A foto só abre com a conta conectada.');return}
+  var box=h('div',{class:'hint'},'Carregando a foto…');
+  sheet([h('h2',null,'🖼️ Foto da nota'),box]);
+  db.doc('contas/nota_'+id).get().then(function(s){
+    var d=s.exists?s.data():null;box.replaceChildren();
+    if(!d||!d.imgs||!d.imgs.length){box.textContent='Essa compra não tem foto guardada.';return}
+    d.imgs.forEach(function(src){box.append(h('img',{src:src,alt:'Foto da nota',style:'width:100%;border-radius:12px;margin-bottom:8px;display:block'}))});
+  },function(){box.textContent='Não consegui abrir a foto agora.'});
+}
+function promptNota(){
+  return 'A(s) imagem(ns) são foto de uma nota ou cupom fiscal brasileiro (NFC-e, SAT, mercado, farmácia, restaurante, loja, posto). Leia TODOS os itens. '+
+   'Responda somente com JSON: {"loja": string|null, "data": "AAAA-MM-DD"|null, "categoria": string, "itens": [{"nome": string, "qtd": number, "unit": number, "total": number}], "descontos": number, "total": number|null}. '+
+   '"categoria" deve ser exatamente uma destas: '+JSON.stringify(S.config.cats)+'. Use números com ponto decimal. "qtd" pode ser fracionada (kg). "total" do item = valor final da linha. '+
+   '"descontos" = soma dos descontos (0 se não houver). "total" = VALOR A PAGAR. "loja" = nome curto da loja (ex.: "Assaí", "Drogasil"). '+
+   'Se a imagem não for uma nota legível, responda {"itens": [], "total": null}.';
+}
+function lerNotaForm(files){
+  return (FBMODE?geminiJSON(promptNota(),files.slice(0,3)):sampleApi.json(promptNota(),{images:files.slice(0,(sampleImg&&sampleImg.maxCount)||3)})).then(function(r){
+    var its=(r&&Array.isArray(r.itens)?r.itens:[]).map(function(x){var q=+x.qtd||1,t=+x.total||((+x.unit||0)*q);t=Math.round(t*100)/100;return {n:String(x.nome||'Item').slice(0,60),q:Math.round(q*1000)/1000,v:+x.unit>0?Math.round(+x.unit*100)/100:Math.round(t/q*100)/100,t:t}}).filter(function(x){return x.t>0});
+    var desc=Math.round((+r.descontos||0)*100)/100;
+    var soma=its.reduce(function(s,x){return s+x.t},0);
+    var total=+r.total>0?Math.round(+r.total*100)/100:Math.round((soma-desc)*100)/100;
+    if(!its.length&&!(total>0))throw {code:'ilegivel'};
+    if(desc>0)its.push({n:'Descontos',q:1,v:-desc,t:-desc});
+    var cat=S.config.cats.indexOf(r.categoria)>=0?r.categoria:'';
+    var data=typeof r.data==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.data)?r.data:'';
+    if(data&&(data>dPlus(today())||data<'2025-01-01'))data='';
+    return {loja:r.loja?String(r.loja).slice(0,40):'',data:data,cat:cat,itens:its,total:total};
+  });
+}
+function msgErroNota(e){var c=e&&e.code;return c==='ilegivel'?'Não consegui ler essa nota. Tente com mais luz e a nota esticada.':c==='app_check'?'O App Check do Firebase está bloqueando a leitura da nota.':c==='ai_off'?'Leitor de nota ainda não ativado no Firebase (AI Logic).':c==='rate_limited'?'Muitas leituras agora. Tente daqui a pouco.':c==='image_rejected'?'Foto não aceita. Tente outra.':'Não consegui ler a nota. Tente de novo.'}
+function vPrecos(root){
+  root.append(back('🏷️ Preços dos produtos'));
+  var H=historicoPrecos(),ks=Object.keys(H);
+  if(!ks.length){root.append(h('div',{class:'card empty'},'Ainda não há notas lidas. Ao lançar um gasto, toque em “📷 Ler nota fiscal”: os itens ficam guardados e aqui aparece o histórico de preço de cada produto.'));return}
+  S.qPreco=S.qPreco||'';
+  var q=h('input',{type:'search',class:'search',placeholder:'🔎 Produto (ex.: leite, café, fralda)',value:S.qPreco,oninput:function(e){S.qPreco=e.target.value;clearTimeout(vPrecos._t);vPrecos._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},300)}});
+  root.append(q);
+  var nq=normItem(S.qPreco);
+  ks=ks.filter(function(k){return !nq||k.indexOf(nq)>=0}).sort(function(a,b){var x=H[a][H[a].length-1].data,y=H[b][H[b].length-1].data;return x<y?1:x>y?-1:H[b].length-H[a].length});
+  root.append(h('div',{class:'hint',style:'margin:0 4px 6px'},ks.length+' produtos · preço por unidade (ou por kg)'));
+  var cd=h('div',{class:'card',style:'padding:2px 12px'});
+  ks.slice(0,150).forEach(function(k){
+    var a=H[k],ult=a[a.length-1],min=a.reduce(function(m,e){return e.v<m.v?e:m},a[0]),ant=a.length>1?a[a.length-2]:null;
+    var det=h('details',{class:'pr'},h('summary',{class:'row',style:'list-style:none;cursor:pointer'},
+      h('div',{class:'grow'},h('div',{class:'t'},ult.n),h('div',{class:'s',style:'display:flex;gap:6px;flex-wrap:wrap'},h('span',null,a.length+'× · menor '+brlRaw(min.v)+(min.loja?' ('+min.loja+')':'')),tagPreco(ult,ant))),
+      h('div',{class:'v'},brlRaw(ult.v))));
+    a.slice().reverse().forEach(function(e){det.append(h('div',{class:'it',style:'font-size:13px'},h('div',{style:'flex:1'},isoToBR(e.data)+' · '+(e.loja||'')),h('b',null,brlRaw(e.v))))});
+    cd.append(det);
+  });
+  root.append(cd);
 }
 
 /* ---------- Parcelas ---------- */
@@ -1393,7 +1548,7 @@ function vMercado(root){
   root.append(h('div',{class:'hint',style:'text-align:center'},db?'A compra fica salva no celular e sincroniza com o do seu par quando houver sinal.':'Salvo neste aparelho.',' ',h('a',{style:'color:var(--acc);cursor:pointer',onclick:function(){S.editLim=true;render()}},'Mudar limite')));
 }
 function lerNota(files){
-  S.lendoNota=true;render();
+  S.lendoNota=true;render();S.notaFotos=null;Promise.all(files.slice(0,3).map(fotoPequena)).then(function(f){S.notaFotos=f},function(){});
   var prompt='As imagens são foto(s) de um cupom fiscal (NFC-e/SAT) de supermercado brasileiro. Leia TODOS os itens comprados. '+
    'Responda somente com JSON neste formato: {"loja": string|null, "data": "AAAA-MM-DD"|null, "itens": [{"nome": string, "qtd": number, "unit": number, "total": number}], "descontos": number, "total": number|null}. '+
    'Use números com ponto decimal (ex.: 12.99). "total" do item = valor final da linha. "descontos" = soma dos descontos (0 se não houver). "total" = VALOR A PAGAR do cupom. '+
@@ -1437,9 +1592,9 @@ function finalizarMerc(){
     h('label',{class:'f'},'Data',dt),
     h('div',{class:'foot'},h('button',{class:'b',onclick:function(){
       var data=dt.value||today(),ym=data.slice(0,7);
-      var o={id:uid(),desc:d.value.trim()||'Mercado',valor:Math.round(tot*100)/100,tipo:'despesa',cat:st.cat,fonte:st.fonte,pessoa:st.pessoa,data:data,venc:'',pago:true,fixa:false,orig:'mercado',
+      var o={id:uid(),loja:S.merc.loja||'',nota:!!(S.notaFotos&&S.notaFotos.length),desc:d.value.trim()||'Mercado',valor:Math.round(tot*100)/100,tipo:'despesa',cat:st.cat,fonte:st.fonte,pessoa:st.pessoa,data:data,venc:'',pago:true,fixa:false,orig:'mercado',
         itens:S.merc.itens.map(function(x){return {n:x.n||'',v:x.v,q:x.q||1}})};
-      setMonth(ym,monthLanc(ym).concat([o]));S.merc={itens:[],limite:S.merc.limite,upd:0};saveMerc();closeSheet();vib();
+      setMonth(ym,monthLanc(ym).concat([o]));if(o.nota){salvaFotoNota(o.id,S.notaFotos);S.notaFotos=null}S.merc={itens:[],limite:S.merc.limite,upd:0};saveMerc();closeSheet();vib();
       toast('Compra de '+brlRaw(o.valor)+' lançada em '+st.cat+'.');render();
     }},'Lançar compra'))]);
 }
