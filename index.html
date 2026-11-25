@@ -239,7 +239,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.25.8';
+const APP_VERSION = 'v2026.11.25.9';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -731,7 +731,7 @@ function vInicio(root){
   // contas do mês, uma linha por conta (como na planilha)
   var des=c.all.filter(function(x){return x.tipo==='despesa'}),grupos={},linhas=[];
   des.forEach(function(x){
-    if(x.orig==='fatura'||x.proj||(ehCartao(x.fonte)&&!x.prev)){var k=x.fonte||'Cartão';if(!grupos[k]){grupos[k]={grupo:k,valor:0,n:0,pago:true,itens:[]};linhas.push(grupos[k])}grupos[k].valor+=+x.valor||0;grupos[k].n++;grupos[k].itens.push(x);if(!x.pago)grupos[k].pago=false}
+    if(x.orig==='fatura'||x.proj||(ehCartao(x.fonte)&&(!x.prev||x.cat==='Fatura cartão'))){var k=x.fonte||'Cartão';if(!grupos[k]){grupos[k]={grupo:k,valor:0,n:0,pago:true,itens:[]};linhas.push(grupos[k])}grupos[k].valor+=+x.valor||0;grupos[k].n++;grupos[k].itens.push(x);if(!x.pago)grupos[k].pago=false}
     else linhas.push({item:x,valor:+x.valor||0});
   });
   // mesma ordem da planilha; o que não estiver nela vem depois, do maior para o menor
@@ -744,8 +744,10 @@ function vInicio(root){
     if(l.grupo){
       cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){if(ehCartao(l.grupo)&&!(l.n===1&&l.itens[0].cat==='Fatura cartão')){abreCartao(l.grupo);return}if(l.n===1){editaRapido(l.itens[0]);return}S.filtro={tipo:'',fonte:l.grupo,pessoa:'',q:''};S.tab='extrato';render()}},
         h('div',{class:'ic',style:'background:var(--chip)'},'💳'),
-        h('div',{class:'grow'},h('div',{class:'t'},l.grupo),h('div',{class:'s'},l.n===1?(l.itens[0].cat==='Fatura cartão'?'fatura do cartão':'1 compra')+(l.pago?' · ✓ pago':''):l.n+' compras · toque para ver')),
-        h('div',{class:'v'},brl(l.valor))));
+        h('div',{class:'grow'},h('div',{class:'t'},l.grupo),h('div',{class:'s'},(function(){var pv=l.itens.filter(function(x){return x.prev}).length,rn=l.n-pv;
+          if(pv&&rn)return 'previsto + '+rn+(rn>1?' compras':' compra');if(pv)return 'previsto · fatura do cartão';
+          return l.n===1?(l.itens[0].cat==='Fatura cartão'?'fatura do cartão':'1 compra')+(l.pago?' · ✓ pago':''):l.n+' compras · toque para ver'})())),
+        h('div',{class:'v',style:l.itens.every(function(x){return x.prev})?'opacity:.75':''},brl(l.valor))));
     }else{var x=l.item;
       cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},
         h('div',{class:'ic',style:'background:'+catColor(x.cat)+'33'},icon(x.cat)),
