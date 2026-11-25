@@ -1,13 +1,11 @@
 // Manda os avisos do Contas da Casa para os celulares (Web Push).
 // Roda no GitHub Actions a cada 15 min. Lê o Firestore sem chave guardada (vínculo GitHub ↔ Google).
 // Não imprime valores nem dados no log.
-const admin = require('firebase-admin');
+const { Firestore, FieldValue } = require('@google-cloud/firestore');
 const webpush = require('web-push');
 
 // Acesso sem chave: o GitHub prova quem é para o Google (Workload Identity Federation).
-if (!process.env.GCP_TOKEN) { console.log('Sem acesso ao Google: nada a fazer.'); process.exit(0); }
-admin.initializeApp({ projectId: 'contas-da-casa-48988', credential: { getAccessToken: () => Promise.resolve({ access_token: process.env.GCP_TOKEN, expires_in: 600 }) } });
-const db = admin.firestore();
+const db = new Firestore({ projectId: 'contas-da-casa-48988' });   // credencial vem do passo de autenticação (sem chave)
 
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 const brl = v => 'R$ ' + (Math.round((+v || 0) * 100) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -98,7 +96,7 @@ const ehCartao = f => !!f && !/boleto|pix/i.test(f);
       catch (e) { erro++; if (e.statusCode === 404 || e.statusCode === 410) remover.push(id); }
     }
   }
-  if (remover.length) { const up = {}; remover.forEach(id => { up['subs.' + id] = admin.firestore.FieldValue.delete(); }); await pushRef.update(up); }
+  if (remover.length) { const up = {}; remover.forEach(id => { up['subs.' + id] = FieldValue.delete(); }); await pushRef.update(up); }
   await estRef.set({ ids: Object.assign({}, vistos, novosVistos), diario: est.diario || null, enviados, rodou: Date.now() });
   console.log(`Avisos: ${fila.length} · enviados ${ok} · falhas ${erro} · inscritos ${Object.keys(subs).length}`);
 })().catch(e => { console.error('Falhou:', e.message); process.exit(1); });

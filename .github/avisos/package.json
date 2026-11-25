@@ -1,1 +1,1 @@
-{ "name": "avisos", "private": true, "dependencies": { "firebase-admin": "^12.7.0", "web-push": "^3.6.7" } }
+{ "name": "avisos", "private": true, "dependencies": { "@google-cloud/firestore": "^7.11.0", "web-push": "^3.6.7" } }
