@@ -205,7 +205,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.25';
+const APP_VERSION = 'v2026.11.24.26';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -640,7 +640,7 @@ function vLockFB(root){
 function vLock(root){
   if(FBMODE&&liberado()===false){vLockFB(root);return}
   var st=liberado();
-  if(st===null){root.append(h('div',{class:'card empty'},'Carregando…'));return}
+  if(st===null){var b=function(w,hh,r){return h('div',{class:'sk',style:'width:'+w+';height:'+hh+'px;border-radius:'+(r||12)+'px;margin:10px 0'})};root.append(b('100%',150,18),b('100%',110,18),b('100%',52,26),b('100%',260,18));return}
   var box=h('div',{class:'card',style:'text-align:center;padding:28px 18px'},h('div',{style:'font-size:44px'},'🔒'),h('h2',{style:'margin:8px 0'},'Contas da Casa'),
     h('p',{class:'mut'},'Este app é só do casal. Para usar, peça acesso — o dono da conta libera com um toque.'));
   if(!S.me){box.append(h('p',{class:'mut'},'Entre na sua conta do Claude para pedir acesso.'))}
@@ -688,7 +688,7 @@ function vInicio(root){
     c.I>0?h('div',{class:'cmp',style:'cursor:pointer;text-decoration:underline dotted',onclick:function(){listaGuardar(S.ym)}},'🐷 Separado para guardar neste mês: '+brl(c.I)+' ✎'):null,
     linhaGuardado(S.ym),
     botaoGuardarProx(S.ym),
-    ((fluxo(S.ym).com<-0.5||(fluxo(S.ym).G>0&&corteNecessario(S.ym).X>0))&&ajustaveis(S.ym).length)?h('button',{class:'b sec full',style:'margin-top:10px;background:#fff;color:#c0392b;border:0;font-weight:700',onclick:function(){abreAjuste(S.ym)}},'✂️ Ajustar gastos para não ficar negativo'):null));
+    ((fluxo(S.ym).com<-0.5||(fluxo(S.ym).G>0&&corteNecessario(S.ym).X>0))&&ajustaveis(S.ym).length)?h('button',{class:'b sec full',style:'margin-top:10px;background:rgba(255,255,255,.1);color:#ffb4b4;border:1px solid rgba(255,138,138,.35);font-weight:700',onclick:function(){abreAjuste(S.ym)}},'✂️ Ajustar gastos para não ficar negativo'):null));
   if(S.owner&&S.pedidos.length)root.append(cardPedidos());
   (function(){var cf=cardConferirInicio();if(cf)root.append(cf);var cg=cardGastoHoje();if(cg)root.append(cg)})();
   root.append(h('button',{class:'b full',style:'margin:0 0 12px;font-size:17px;padding:15px',onclick:function(){openForm(null)}},'＋ Lançar conta ou gasto'));
@@ -730,7 +730,7 @@ function vInicio(root){
   // entradas
   var rec=c.all.filter(function(x){return x.tipo==='receita'});
   var ce=h('div',{class:'card'},h('h3',null,'Entradas',h('span',{style:'font-weight:700;color:var(--ok)'},brl(c.R))));
-  rec.forEach(function(x){ce.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},h('div',{class:'ic',style:'background:var(--chip)'},(x.pessoa||'?')[0]),h('div',{class:'grow'},h('div',{class:'t'},x.desc||'Entrada'),h('div',{class:'s'},'toque para mudar')),h('div',{class:'v'},brl(x.valor))))});
+  rec.forEach(function(x){ce.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){editaRapido(x)}},h('div',{class:'ic',style:'background:var(--chip)'},x.cat==='Salário'?'💰':x.cat==='Renda extra'?'✨':icon(x.cat)),h('div',{class:'grow'},h('div',{class:'t'},x.desc||'Entrada'),h('div',{class:'s'},'toque para mudar')),h('div',{class:'v'},brl(x.valor))))});
   ce.append(h('a',{style:'display:block;padding:10px 0 2px;color:var(--acc);cursor:pointer;font-weight:600',onclick:function(){openForm({tipo:'receita',cat:'Salário',pessoa:'Casal'},true)}},'＋ Adicionar entrada'));
   root.append(ce);
   // metas
@@ -773,7 +773,7 @@ function gastoLivreHoje(){
   return {orc:orc,gasto:gasto,resta:orc-gasto,porDia:porDia,hojeGasto:gHoje,podeHoje:pode,faltam:faltam,ult:ult,mes:mesCal,mPag:mPag,comPag:fx.com};
 }
 function cardGastoHoje(){
-  var g=gastoLivreHoje();if(!g)return null;
+  var g=gastoLivreHoje();if(!g)return null;if(g.mPag&&S.ym!==g.mPag)return null;   // só no mês em que o gasto de hoje cai
   var ok=g.podeHoje>=0,cor=(g.resta<0||g.comPag<0)?'var(--bad)':(ok?'var(--ok)':'#e0a019');
   return h('div',{class:'card',style:'cursor:pointer',onclick:function(){S.tab='inicio';render();setTimeout(function(){var el=document.getElementById('metas-card');if(el)el.scrollIntoView({behavior:'smooth'})},50)}},
     h('h3',null,'💸 Hoje dá para gastar',h('span',{style:'font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0'},'até '+g.ult+'/'+g.mes.slice(5))),
@@ -1167,7 +1167,11 @@ function openForm(item,draft){
     if(st.tipo==='investimento')return h('div');
     var used={};Object.keys(S.months).forEach(function(k){monthLanc(k).forEach(function(x){if(x.cat)used[x.cat]=(used[x.cat]||0)+1})});
     var cats=S.config.cats.slice().sort(function(a,b){return (used[b]||0)-(used[a]||0)});
-    return chips(cats.map(function(cn){return [cn,icon(cn)+' '+cn]}),st.cat,function(v){st.cat=v});
+    var poucas=!st.todasCats&&cats.length>10;
+    var mostra=poucas?cats.slice(0,8):cats;if(poucas&&st.cat&&mostra.indexOf(st.cat)<0)mostra=mostra.concat([st.cat]);
+    var w=chips(mostra.map(function(cn){return [cn,icon(cn)+' '+cn]}),st.cat,function(v){st.cat=v});
+    if(poucas)w.append(h('button',{type:'button',class:'chip',style:'color:var(--acc);font-weight:700',onclick:function(){st.todasCats=true;var n=catChips();catW.replaceWith(n);catW=n}},'＋ todas ('+cats.length+')'));
+    return w;
   }
   var catW=catChips();
   var fData=h('input',{type:'date',value:it.data||''});
