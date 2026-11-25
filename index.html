@@ -239,7 +239,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.25.6';
+const APP_VERSION = 'v2026.11.25.7';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1206,8 +1206,9 @@ function openForm(item,draft){
   var it=Object.assign({tipo:'despesa',desc:'',valor:'',cat:S.last.cat||'',fonte:S.last.fonte||S.config.fontes[0]||'',pessoa:S.last.pessoa||'Casal',venc:'',pago:false,fixa:false,data:defData},item||d0||{});
   if(item&&!item.data)it.data='';
   var st={tipo:it.tipo,cat:it.cat,fonte:it.fonte,pessoa:it.pessoa,fotos:[],notaData:false,cofre:it.cofre||'',n:1};
+  var podeParc=!item||(!item.proj&&!item.prev&&!item.virt&&item.orig!=='fatura'&&!item.parcTotal&&!/\d+\s*\/\s*\d+/.test(item.desc||''));
   var parcInfo=h('div',{class:'hint',style:'margin:-2px 0 0;min-height:18px'});
-  function infoParc(){var v=parseVal(fVal.value);if(st.n>1){var pv=Math.round(v/st.n*100)/100;var m0=ehCartao(st.fonte)?mesDaFatura(st.fonte,today()):S.ym;if(m0<INICIO)m0=INICIO;var mf=ymAdd(m0,st.n-1);parcInfo.textContent=v?st.n+'x de '+brl(pv)+' · de '+MESES[+m0.slice(5)-1].slice(0,3).toLowerCase()+'/'+m0.slice(2,4)+' a '+MESES[+mf.slice(5)-1].slice(0,3).toLowerCase()+'/'+mf.slice(2,4):'Digite o valor total da compra.'}else parcInfo.textContent=''}
+  function infoParc(){var v=parseVal(fVal.value);if(st.n>1){var pv=Math.round(v/st.n*100)/100;var m0=item?(ymOrig||S.ym):(ehCartao(st.fonte)?mesDaFatura(st.fonte,today()):S.ym);if(m0<INICIO)m0=INICIO;var mf=ymAdd(m0,st.n-1);parcInfo.textContent=v?st.n+'x de '+brl(pv)+' · de '+MESES[+m0.slice(5)-1].slice(0,3).toLowerCase()+'/'+m0.slice(2,4)+' a '+MESES[+mf.slice(5)-1].slice(0,3).toLowerCase()+'/'+mf.slice(2,4):'Digite o valor total da compra.'}else parcInfo.textContent=''}
   var parcW=h('div',{style:'margin:10px 0 4px'},h('label',{class:'f',style:'margin-bottom:6px'},'Parcelas'),chips([1,2,3,4,5,6,7,8,9,10,11,12].map(function(n){return [n,n===1?'À vista':n+'x']}),1,function(v){st.n=+v;infoParc()},true),parcInfo);
   var seg=h('div',{class:'seg'});
   [['despesa','Gasto','d'],['receita','Entrou dinheiro','r'],['investimento','🐷 Guardar','i']].forEach(function(o){var b=h('button',{type:'button',class:(st.tipo===o[0]?'on ':'')+o[2],onclick:function(){var mud=st.tipo!==o[0];st.tipo=o[0];[].forEach.call(seg.children,function(c){c.classList.remove('on')});b.classList.add('on');if(mud){st.cat=o[0]==='receita'?'Renda extra':o[0]==='investimento'?'Reserva de emergência':(S.last.cat||'');var n2=catChips();catW.replaceWith(n2);catW=n2}ajustaTipo()}},o[1]);seg.append(b)});
@@ -1243,13 +1244,16 @@ function openForm(item,draft){
     delete o._ym;
     if(!o.valor){toast('Digite o valor.');fVal.focus();return}
     var parcNova=null;
-    if(!item&&st.tipo==='despesa'&&st.n>1){var nn=st.n,tot=o.valor,pv=Math.round(tot/nn*100)/100,base=(o.desc||st.cat||'Compra').replace(/\s*\d+\/\d+\s*$/,'');
+    if(podeParc&&st.tipo==='despesa'&&st.n>1){var nn=st.n,tot=o.valor,pv=Math.round(tot/nn*100)/100,base=(o.desc||st.cat||'Compra').replace(/\s*\d+\/\d+\s*$/,'');
       o.valor=Math.round((tot-pv*(nn-1))*100)/100;o.desc=base+' 1/'+nn;o.parcTotal=tot;parcNova={desc:base,valor:pv,atual:2,total:nn,fonte:o.fonte,pessoa:o.pessoa,cat:o.cat,adiantadas:[]}}
     if(st.tipo==='investimento'&&st.cofre){o.cofre=st.cofre;if(it.usar)o.valor=-Math.abs(o.valor)}else delete o.cofre;delete o.usar;
     if(!o.id){o.id=uid();o.orig='manual'}
     if(!st.dupOk&&!item){var ymT=st.notaData&&o.data?(ehCartao(o.fonte)?mesDaFatura(o.fonte,o.data):o.data.slice(0,7)):((o.data||o.venc||'').slice(0,7)||S.ym);var rp=pareceRepetido(o,ymT<INICIO?INICIO:ymT);
       if(rp){st.dupOk=true;avisoDup.replaceChildren(h('div',{class:'card',style:'border-color:var(--bad);padding:10px 12px;margin:10px 0'},h('b',null,'⚠️ Parece repetido'),h('div',{class:'hint',style:'margin:4px 0 0'},'Já existe “'+(rp.desc||'')+'” de '+brlRaw(rp.valor)+(rp.data?' em '+isoToBR(rp.data):'')+(rp.fonte?' · '+rp.fonte:'')+(rp.orig==='fatura'?' (veio da fatura)':'')+'. Se for outra compra, toque em Salvar de novo.')));vib();toast('Parece repetido. Confira antes de salvar.');try{avisoDup.scrollIntoView({block:'center'})}catch(e){}return}}
-    var ym=(o.orig==='fatura'&&ymOrig)?ymOrig:((o.data||o.venc||'').slice(0,7)||ymOrig||S.ym);
+    var ym;
+    if(ymOrig&&(o.orig==='fatura'||((o.data||'')===(item.data||'')&&(o.venc||'')===(item.venc||'')&&o.fonte===item.fonte)))ym=ymOrig;   // editar sem mudar data/cartão: fica no mesmo mês
+    else ym=(o.data&&ehCartao(o.fonte)&&o.tipo==='despesa')?mesDaFatura(o.fonte,o.data):((o.data||o.venc||'').slice(0,7)||ymOrig||S.ym);
+    if(ym<INICIO)ym=INICIO;
     if(!ymOrig&&!st.notaData&&o.tipo==='despesa'&&ehCartao(o.fonte)&&o.data===defData&&defData!==today()){o.data=today();st.notaData=true}   // compra no cartão: data de hoje e vai para a fatura certa
     if(st.notaData&&o.data&&!ymOrig){ym=ehCartao(o.fonte)?mesDaFatura(o.fonte,o.data):o.data.slice(0,7);if(ym<INICIO)ym=INICIO}
     if(st.fotos.length)o.nota=true;
@@ -1277,7 +1281,7 @@ function openForm(item,draft){
   var blocoFonte=h('div',null,h('label',{class:'f'},'Pago com'),chips(S.config.fontes,st.fonte,function(v){st.fonte=v}));
   var dicaTipo=h('div',{class:'hint',style:'margin:-4px 0 10px'});
   function ajustaTipo(){
-    var t=st.tipo;parcW.style.display=(t==='despesa'&&!item)?'':'none';
+    var t=st.tipo;parcW.style.display=(t==='despesa'&&podeParc)?'':'none';
     lblCat.style.display=t==='investimento'?'none':'';lblCat.textContent=t==='receita'?'De onde veio':'Categoria';
     blocoFonte.style.display=t==='despesa'?'':'none';notaW.style.display=t==='despesa'?'':'none';
     fDesc.placeholder=t==='receita'?'Ex.: Freela, venda do berço, reembolso':t==='investimento'?'Para quê? (ex.: Reserva, Enxoval da Agnes)':'Descrição (ex.: Energia, Mercado)';
