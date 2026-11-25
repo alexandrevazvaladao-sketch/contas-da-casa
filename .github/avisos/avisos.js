@@ -87,6 +87,8 @@ const ehCartao = f => !!f && !/boleto|pix/i.test(f);
     est.diario = hoje;
   }
 
+  if (process.env.TESTE === 'true') fila.push({ para: 'todos', title: 'Teste do Contas da Casa', body: 'Se você está vendo isso, as notificações estão funcionando.', tag: 'teste' });
+
   // 3) Envia
   let ok = 0, erro = 0; const remover = [];
   for (const n of fila) {

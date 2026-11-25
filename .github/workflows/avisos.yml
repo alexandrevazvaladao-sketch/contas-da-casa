@@ -2,7 +2,12 @@ name: Avisos no celular
 on:
   schedule:
     - cron: '7,22,37,52 * * * *'   # a cada 15 minutos, fora da hora cheia (o GitHub pode atrasar)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      teste:
+        description: 'Mandar uma notificação de teste para todos os celulares'
+        type: boolean
+        default: true
 concurrency: { group: avisos, cancel-in-progress: false }
 permissions:
   contents: read
@@ -25,3 +30,5 @@ jobs:
         working-directory: .github/avisos
       - run: node avisos.js
         working-directory: .github/avisos
+        env:
+          TESTE: ${{ github.event_name == 'workflow_dispatch' && inputs.teste }}
