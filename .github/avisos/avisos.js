@@ -1,11 +1,11 @@
 // Manda os avisos do Contas da Casa para os celulares (Web Push).
-// Roda no GitHub Actions a cada 15 min. Lê o Firestore com a conta de serviço (segredo FIREBASE_SA).
+// Roda no GitHub Actions a cada 15 min. Lê o Firestore sem chave guardada (vínculo GitHub ↔ Google).
 // Não imprime valores nem dados no log.
 const admin = require('firebase-admin');
 const webpush = require('web-push');
 
-if (!process.env.FIREBASE_SA) { console.log('Sem FIREBASE_SA: nada a fazer.'); process.exit(0); }
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SA)) });
+// Acesso sem chave: o GitHub prova quem é para o Google (Workload Identity Federation).
+admin.initializeApp({ credential: admin.credential.applicationDefault(), projectId: 'contas-da-casa-48988' });
 const db = admin.firestore();
 
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];

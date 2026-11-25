@@ -4,6 +4,9 @@ on:
     - cron: '*/15 * * * *'   # a cada 15 minutos (o GitHub pode atrasar alguns minutos)
   workflow_dispatch: {}
 concurrency: { group: avisos, cancel-in-progress: false }
+permissions:
+  contents: read
+  id-token: write
 jobs:
   avisos:
     runs-on: ubuntu-latest
@@ -11,11 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { sparse-checkout: .github/avisos }
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/431480530623/locations/global/workloadIdentityPools/github/providers/contas
+          service_account: firebase-adminsdk-fbsvc@contas-da-casa-48988.iam.gserviceaccount.com
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm install --no-audit --no-fund
         working-directory: .github/avisos
       - run: node avisos.js
         working-directory: .github/avisos
-        env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
