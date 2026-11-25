@@ -223,7 +223,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.31';
+const APP_VERSION = 'v2026.11.24.32';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1099,7 +1099,7 @@ function vMais(root){
   root.append(h('div',{class:'card',style:'padding:12px 14px'},h('h3',null,'🎨 Aparência'),
     chips([['escuro','🌙 Escuro'],['claro','☀️ Claro'],['auto','📱 Igual ao celular']],tema,function(v){pref('tema',v);document.documentElement.setAttribute('data-tema',v);try{document.querySelector('meta[name="theme-color"]').setAttribute('content',v==='escuro'?'#000000':'#16233d')}catch(e){}render()}),
     h('div',{class:'hint',style:'margin:-6px 0 0'},'Vale só para este celular.')));
-  if(bioPode())root.append(h('div',{class:'card',style:'padding:12px 14px;display:flex;align-items:center;gap:10px'},h('div',{class:'grow'},h('div',{class:'t',style:'font-weight:700'},'🔒 Face ID ao abrir'),h('div',{class:'s',style:'white-space:normal'},bioAtivo()?'Ligado neste celular. Pede o Face ID ao abrir e quando volta depois de 5 minutos.':'Pede o Face ID para abrir o app neste celular.')),
+  if(false)root.append(h('div',{class:'card',style:'padding:12px 14px;display:flex;align-items:center;gap:10px'},h('div',{class:'grow'},h('div',{class:'t',style:'font-weight:700'},'🔒 Face ID ao abrir'),h('div',{class:'s',style:'white-space:normal'},bioAtivo()?'Ligado neste celular. Pede o Face ID ao abrir e quando volta depois de 5 minutos.':'Pede o Face ID para abrir o app neste celular.')),
     h('button',{class:'b '+(bioAtivo()?'sec':''),style:'flex:0 0 auto;width:auto;padding:8px 14px',onclick:function(){if(bioAtivo()){bioDesativar();render()}else bioAtivar().then(function(){render()})}},bioAtivo()?'Desligar':'Ligar')));
   var items=[['🔍','Conferir lançamentos','Acha repetidos e valores que podem estar errados','conferir'],['🤔','Posso comprar isso?','Simula a compra (à vista ou parcelada) nos próximos meses','__posso'],['🔁','Assinaturas e fixas','O que se repete todo mês e quanto dá por ano','assinaturas'],['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['🏷️','Preços dos produtos','Histórico de preço das notas lidas','precos'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
   var abreI=function(i){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)};
@@ -1113,7 +1113,7 @@ function vMais(root){
   setTimeout(filtra,0);
   items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
   root.append(cd);
-  [].slice.call(root.children,0,bioPode()?2:1).forEach(function(n){root.append(n)});
+  [].slice.call(root.children,0,1).forEach(function(n){root.append(n)});
   var cp=cardPush();if(cp)root.append(cp);   // aparência e Face ID vão para o fim, como nos apps de banco
   root.append(h('div',{class:'hint',style:'text-align:center'},'Dica: deslize para os lados na tela para trocar de mês.'));
   root.append(h('div',{class:'card',style:'padding:10px 14px;display:flex;align-items:center;gap:10px'},h('div',{class:'grow'},h('div',{class:'t'},'ℹ️ Versão do app'),h('div',{class:'s',style:'font-variant-numeric:tabular-nums'},APP_VERSION+(navigator.onLine?'':' · sem internet'))),h('button',{class:'b sec',style:'flex:0 0 auto;width:auto;padding:8px 12px',onclick:function(){toast('Procurando atualização…');setTimeout(function(){location.replace(location.pathname+'?v='+Date.now())},400)}},'🔄 Atualizar')));
@@ -1661,10 +1661,7 @@ function trancar(){
     .then(function(){L.classList.add('sai');setTimeout(function(){L.remove()},300)},function(){btn.disabled=false})}
   L.addEventListener('click',function(e){if(e.target!==btn)abrir()});
 }
-(function(){
-  trancar();var saiu=0;
-  document.addEventListener('visibilitychange',function(){if(document.hidden)saiu=Date.now();else if(saiu&&Date.now()-saiu>300000)trancar()});
-})();
+try{localStorage.removeItem(BIO_KEY)}catch(e){}   // Face ID removido do app (no iPhone ele sempre exige um toque a mais)
 /* ---------- Tela do cartão (estilo app do banco) ---------- */
 function infoFatura(fo,ym){
   var V=+((S.config.vencDia||{})['fatura:'+fo])||0;if(!V)return {V:0};
