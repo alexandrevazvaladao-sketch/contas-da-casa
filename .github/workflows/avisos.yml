@@ -1,7 +1,7 @@
 name: Avisos no celular
 on:
   schedule:
-    - cron: '*/15 * * * *'   # a cada 15 minutos (o GitHub pode atrasar alguns minutos)
+    - cron: '7,22,37,52 * * * *'   # a cada 15 minutos, fora da hora cheia (o GitHub pode atrasar)
   workflow_dispatch: {}
 concurrency: { group: avisos, cancel-in-progress: false }
 permissions:
