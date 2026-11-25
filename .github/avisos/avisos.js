@@ -5,7 +5,8 @@ const admin = require('firebase-admin');
 const webpush = require('web-push');
 
 // Acesso sem chave: o GitHub prova quem é para o Google (Workload Identity Federation).
-admin.initializeApp({ credential: admin.credential.applicationDefault(), projectId: 'contas-da-casa-48988' });
+if (!process.env.GCP_TOKEN) { console.log('Sem acesso ao Google: nada a fazer.'); process.exit(0); }
+admin.initializeApp({ projectId: 'contas-da-casa-48988', credential: { getAccessToken: () => Promise.resolve({ access_token: process.env.GCP_TOKEN, expires_in: 600 }) } });
 const db = admin.firestore();
 
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];

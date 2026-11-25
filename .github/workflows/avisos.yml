@@ -14,8 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { sparse-checkout: .github/avisos }
-      - uses: google-github-actions/auth@v2
+      - id: auth
+        uses: google-github-actions/auth@v2
         with:
+          token_format: access_token
+          access_token_lifetime: 600s
           workload_identity_provider: projects/431480530623/locations/global/workloadIdentityPools/github/providers/contas
           service_account: firebase-adminsdk-fbsvc@contas-da-casa-48988.iam.gserviceaccount.com
       - uses: actions/setup-node@v4
@@ -24,3 +27,5 @@ jobs:
         working-directory: .github/avisos
       - run: node avisos.js
         working-directory: .github/avisos
+        env:
+          GCP_TOKEN: ${{ steps.auth.outputs.access_token }}
