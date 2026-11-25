@@ -143,7 +143,7 @@ label.f>input,label.f>select,label.f>textarea{margin-top:4px}
 .tabbar .fab{flex:0 0 auto;width:62px;height:62px;border-radius:50%;background:var(--acc);color:#fff;font-size:32px;font-weight:300;margin:-22px 8px 8px;box-shadow:0 6px 16px rgba(59,108,240,.45);display:flex;align-items:center;justify-content:center;padding:0;min-height:0}
 .alerta{position:fixed;left:12px;right:12px;bottom:calc(84px + var(--sab));z-index:49;display:flex;gap:10px;align-items:center;background:#7a1f1f;color:#fff;padding:12px 12px 12px 14px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:14px;cursor:pointer;animation:sobe .25s ease}.alerta .shx{background:rgba(255,255,255,.15);color:#fff;border:0}@keyframes sobe{from{transform:translateY(20px);opacity:0}}
 #menu{position:relative}#menu[data-n]::after{content:attr(data-n);position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 3px;border-radius:9px;background:#e0a800;color:#000;font-size:10px;font-weight:800;line-height:16px;text-align:center}#menu.alto[data-n]::after{background:#e5484d;color:#fff}
-.icn{display:inline-flex;width:1.15em;height:1.15em;vertical-align:-.2em;flex:0 0 auto}.icn svg{width:100%;height:100%}
+.emj .icn{margin-right:.15em}.icn{display:inline-flex;width:1.15em;height:1.15em;vertical-align:-.2em;flex:0 0 auto}.icn svg{width:100%;height:100%}
 .ic .icn{width:21px;height:21px}.ic{color:var(--tx)}
 .icn.dot svg{fill:currentColor}.icn.dot.red{color:var(--bad)}.icn.dot.amarelo{color:#e0a800}
 .rapido span .icn{width:24px;height:24px}
@@ -223,7 +223,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.29';
+const APP_VERSION = 'v2026.11.24.30';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -738,10 +738,10 @@ function vInicio(root){
   });
   (function(){var prox=MESES[+ymAdd(S.ym,1).split('-')[1]-1].toLowerCase(),it=monthLanc(S.ym).filter(function(x){return x.id===idGuardar(S.ym)})[0],sug=sugestaoGuardar(S.ym),outros=c.I-(it?+it.valor:0);
     cc.append(h('div',{class:'row',style:'cursor:pointer;border-top:2px dashed var(--line);margin-top:4px',onclick:function(){abreGuardar(S.ym)}},
-      h('div',{class:'ic',style:'background:#ffe3ec'},'🐷'),
+      h('div',{class:'ic',style:'background:rgba(236,72,153,.18);color:#f472b6'},'🐷'),
       h('div',{class:'grow'},h('div',{class:'t'},'Guardar para '+prox),h('div',{class:'s'},it?(sug>+it.valor+0.5?'pode separar mais '+brl(sug-it.valor):'✓ '+prox+' coberto · toque para mudar'):(sug>0?'sugerido '+brl(sug)+' para '+prox+' não ficar negativo':'não precisa · toque para separar'))),
       h('div',{class:'v',style:'color:'+(it?'var(--tx)':'var(--mut)')},it?brl(it.valor):(sug>0?brl(sug):'—'))));
-    if(outros>0.009)cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){listaGuardar(S.ym)}},h('div',{class:'ic',style:'background:#ffe3ec'},'🐷'),h('div',{class:'grow'},h('div',{class:'t'},'Outros valores separados'),h('div',{class:'s'},'toque para ver')),h('div',{class:'v'},brl(outros))));
+    if(outros>0.009)cc.append(h('div',{class:'row',style:'cursor:pointer',onclick:function(){listaGuardar(S.ym)}},h('div',{class:'ic',style:'background:rgba(236,72,153,.18);color:#f472b6'},'🐷'),h('div',{class:'grow'},h('div',{class:'t'},'Outros valores separados'),h('div',{class:'s'},'toque para ver')),h('div',{class:'v'},brl(outros))));
   })();
   root.append(cc);
   root.append(cardPrevisao());
@@ -1721,7 +1721,7 @@ function troca(t){
     f.appendChild(ico(EMO[e],e==='🔴'?'dot red':e==='🟡'?'dot amarelo':''));i=m.index+m[0].length;
     if(v.charAt(i)===' '&&f.lastChild){f.appendChild(document.createTextNode(' '));i++}}
   if(i<v.length)f.appendChild(document.createTextNode(v.slice(i)));
-  pai.replaceChild(f,t);
+  var w=document.createElement('span');w.className='emj';w.appendChild(f);pai.replaceChild(w,t);
 }
 (function(){
   desemoji(document.body);
