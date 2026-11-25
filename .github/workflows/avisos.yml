@@ -1,0 +1,21 @@
+name: Avisos no celular
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # a cada 15 minutos (o GitHub pode atrasar alguns minutos)
+  workflow_dispatch: {}
+concurrency: { group: avisos, cancel-in-progress: false }
+jobs:
+  avisos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: .github/avisos }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+        working-directory: .github/avisos
+      - run: node avisos.js
+        working-directory: .github/avisos
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}

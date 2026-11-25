@@ -223,7 +223,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.24.30';
+const APP_VERSION = 'v2026.11.24.31';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -957,7 +957,7 @@ function copiarFixas(){
 /* ---------- Extrato ---------- */
 function vExtrato(root){
   var f=S.filtro,c=calc(S.ym);
-  var q=h('input',{type:'search',class:'search',placeholder:'🔎 Buscar (ex.: mercado, ifood, leite)',value:f.q,oninput:function(e){f.q=e.target.value;clearTimeout(vExtrato._t);vExtrato._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},350)}});
+  var q=h('input',{type:'search',class:'search',placeholder:'Buscar (ex.: mercado, ifood, leite)',value:f.q,oninput:function(e){f.q=e.target.value;clearTimeout(vExtrato._t);vExtrato._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},350)}});
   root.append(q);
   // Um filtro só por vez: tipo (chips) + cartão/conta (uma caixa de seleção)
   var fontesUsadas={};c.all.forEach(function(x){if(x.fonte)fontesUsadas[x.fonte]=1});
@@ -1103,7 +1103,7 @@ function vMais(root){
     h('button',{class:'b '+(bioAtivo()?'sec':''),style:'flex:0 0 auto;width:auto;padding:8px 14px',onclick:function(){if(bioAtivo()){bioDesativar();render()}else bioAtivar().then(function(){render()})}},bioAtivo()?'Desligar':'Ligar')));
   var items=[['🔍','Conferir lançamentos','Acha repetidos e valores que podem estar errados','conferir'],['🤔','Posso comprar isso?','Simula a compra (à vista ou parcelada) nos próximos meses','__posso'],['🔁','Assinaturas e fixas','O que se repete todo mês e quanto dá por ano','assinaturas'],['📋','Extrato do mês','Todos os lançamentos, por dia','__extrato'],['🏷️','Preços dos produtos','Histórico de preço das notas lidas','precos'],['📆','Parcelas','Compras parceladas e projeção','parcelas'],['💳','Importar fatura','CSV do Nubank ou outro cartão','fatura'],['🧾','Boleto ou Pix','Cole o código e o valor/vencimento saem sozinhos','boletos'],['⬇️','Exportar mês (CSV)','Abre no Excel ou Google Planilhas','exportar'],['⚙️','Ajustes e backup','Cartões, categorias, metas','ajustes']];
   var abreI=function(i){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)};
-  var busca=h('input',{type:'search',class:'search',placeholder:'🔎 Buscar no app (ex.: fatura, preços, backup)',value:S.qMenu||'',oninput:function(e){S.qMenu=e.target.value;filtra()}});
+  var busca=h('input',{type:'search',class:'search',placeholder:'Buscar no app (ex.: fatura, preços, backup)',value:S.qMenu||'',oninput:function(e){S.qMenu=e.target.value;filtra()}});
   root.append(busca);
   var rap=h('div',{class:'rapido'});
   [['🔍','Conferir','conferir'],['🤔','Posso comprar?','__posso'],['📋','Extrato','__extrato'],['🏷️','Preços','precos']].forEach(function(r){rap.append(h('button',{type:'button',onclick:function(){abreI(['','','',r[2]])}},h('span',null,r[0]),h('small',null,r[1])))});
@@ -1113,7 +1113,8 @@ function vMais(root){
   setTimeout(filtra,0);
   items.forEach(function(i){cd.append(h('div',{class:'row',onclick:function(){if(i[3]==='__posso'){abrePossoComprar();return}if(i[3]==='__extrato'){S.tab='extrato';S.sub=''}else if(i[3]==='__pagar'){S.tab='pagar';S.sub=''}else S.sub=i[3];render();window.scrollTo(0,0)}},h('div',{class:'ic',style:'background:var(--chip)'},i[0]),h('div',{class:'grow'},h('div',{class:'t'},i[1]),h('div',{class:'s'},i[2])),h('div',{class:'mut'},'›')))});
   root.append(cd);
-  [].slice.call(root.children,0,bioPode()?2:1).forEach(function(n){root.append(n)});   // aparência e Face ID vão para o fim, como nos apps de banco
+  [].slice.call(root.children,0,bioPode()?2:1).forEach(function(n){root.append(n)});
+  var cp=cardPush();if(cp)root.append(cp);   // aparência e Face ID vão para o fim, como nos apps de banco
   root.append(h('div',{class:'hint',style:'text-align:center'},'Dica: deslize para os lados na tela para trocar de mês.'));
   root.append(h('div',{class:'card',style:'padding:10px 14px;display:flex;align-items:center;gap:10px'},h('div',{class:'grow'},h('div',{class:'t'},'ℹ️ Versão do app'),h('div',{class:'s',style:'font-variant-numeric:tabular-nums'},APP_VERSION+(navigator.onLine?'':' · sem internet'))),h('button',{class:'b sec',style:'flex:0 0 auto;width:auto;padding:8px 12px',onclick:function(){toast('Procurando atualização…');setTimeout(function(){location.replace(location.pathname+'?v='+Date.now())},400)}},'🔄 Atualizar')));
 }
@@ -1375,7 +1376,7 @@ function vPrecos(root){
   var H=historicoPrecos(),ks=Object.keys(H);
   if(!ks.length){root.append(h('div',{class:'card empty'},'Ainda não há notas lidas. Ao lançar um gasto, toque em “📷 Ler nota fiscal”: os itens ficam guardados e aqui aparece o histórico de preço de cada produto.'));return}
   S.qPreco=S.qPreco||'';
-  var q=h('input',{type:'search',class:'search',placeholder:'🔎 Produto (ex.: leite, café, fralda)',value:S.qPreco,oninput:function(e){S.qPreco=e.target.value;clearTimeout(vPrecos._t);vPrecos._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},300)}});
+  var q=h('input',{type:'search',class:'search',placeholder:'Produto (ex.: leite, café, fralda)',value:S.qPreco,oninput:function(e){S.qPreco=e.target.value;clearTimeout(vPrecos._t);vPrecos._t=setTimeout(function(){render();var i=$('.search');i&&(i.focus(),i.setSelectionRange(i.value.length,i.value.length))},300)}});
   root.append(q);
   var nq=normItem(S.qPreco);
   ks=ks.filter(function(k){return !nq||k.indexOf(nq)>=0}).sort(function(a,b){var x=H[a][H[a].length-1].data,y=H[b][H[b].length-1].data;return x<y?1:x>y?-1:H[b].length-H[a].length});
@@ -1727,6 +1728,49 @@ function troca(t){
   desemoji(document.body);
   if(window.MutationObserver)new MutationObserver(function(ms){ms.forEach(function(m){if(m.type==='characterData')desemoji(m.target);else m.addedNodes.forEach(function(x){desemoji(x)})})}).observe(document.body,{childList:true,subtree:true,characterData:true});
 })();
+
+/* ---------- Notificações no celular (Web Push) ---------- */
+function pushPode(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window}
+function instalado(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true}
+function idAparelho(){var k='cc-aparelho';try{var v=localStorage.getItem(k);if(!v){v='d'+Math.random().toString(36).slice(2,10);localStorage.setItem(k,v)}return v}catch(e){return 'd0'}}
+function b64url(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function deb64url(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+function pushAtivo(){try{return localStorage.getItem('cc-push')==='1'&&Notification.permission==='granted'}catch(e){return false}}
+function chaveVapid(){
+  return db.doc('contas/push').get().then(function(s){var d=s.exists?s.data():{};if(d.vapid&&d.vapid.pub)return d.vapid.pub;
+    return crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']).then(function(k){
+      return Promise.all([crypto.subtle.exportKey('raw',k.publicKey),crypto.subtle.exportKey('jwk',k.privateKey)])}).then(function(r){
+      var v={pub:b64url(r[0]),priv:r[1].d};return db.doc('contas/push').set({vapid:v},{merge:true}).then(function(){return v.pub})})});
+}
+function ativarPush(){
+  if(!pushPode()){toast('Este celular não aceita notificações de app da web.');return Promise.resolve()}
+  if(!instalado()){toast('Abra pelo ícone na tela de início para ativar.');return Promise.resolve()}
+  if(!db){toast('Entre na conta primeiro.');return Promise.resolve()}
+  return Notification.requestPermission().then(function(p){
+    if(p!=='granted'){toast('Notificações não permitidas. Libere em Ajustes do iPhone → Notificações → Contas.');return}
+    return Promise.all([chaveVapid(),navigator.serviceWorker.ready]).then(function(r){
+      var pub=r[0],reg=r[1];
+      return reg.pushManager.getSubscription().then(function(old){return old||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:deb64url(pub)})}).then(function(sub){
+        var reg2={};reg2[idAparelho()]={sub:JSON.parse(JSON.stringify(sub)),nome:quemSou()||'',em:Date.now()};
+        return db.doc('contas/push').set({subs:reg2},{merge:true}).then(function(){
+          localStorage.setItem('cc-push','1');reg.showNotification('Notificações ligadas',{body:'Você vai receber os avisos do Contas da Casa neste celular.',icon:'icon-192.png'});toast('Notificações ligadas neste celular.');render()});
+      });
+    });
+  }).catch(function(e){try{console.warn('[push]',e)}catch(_){}toast('Não consegui ligar as notificações.')});
+}
+function desativarPush(){
+  localStorage.removeItem('cc-push');
+  navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription()}).then(function(s){return s&&s.unsubscribe()}).catch(function(){});
+  if(db){var o={};o['subs.'+idAparelho()]=firebase.firestore.FieldValue.delete();try{db.doc('contas/push').update(o).catch(function(){})}catch(e){}}
+  toast('Notificações desligadas neste celular.');render();
+}
+function cardPush(){
+  if(!pushPode())return null;var on=pushAtivo();
+  return h('div',{class:'card',style:'padding:12px 14px;display:flex;align-items:center;gap:10px'},
+    h('div',{class:'grow'},h('div',{class:'t',style:'font-weight:700'},'🔔 Notificações'),
+      h('div',{class:'s',style:'white-space:normal'},on?'Ligadas neste celular: contas vencendo, fatura fechando e o que o outro lançar.':!instalado()?'Abra o app pelo ícone da tela de início para poder ligar.':'Avisos de contas vencendo, fatura fechando e o que o outro lançar.')),
+    h('button',{class:'b '+(on?'sec':''),style:'flex:0 0 auto;width:auto;padding:8px 14px',onclick:function(){if(on)desativarPush();else ativarPush()}},on?'Desligar':'Ligar'));
+}
 
 /* ---------- Parcelas ---------- */
 function fimParcela(p){return ymAdd(p.mes,p.total-(+p.atual||1))}
