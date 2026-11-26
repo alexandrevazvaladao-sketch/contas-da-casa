@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.3';
+const APP_VERSION = 'v2026.11.26.4';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -2083,6 +2083,31 @@ function vMercado(root){
   root.append(h('div',{class:'hint',style:'text-align:center'},db?'A compra fica salva no celular e sincroniza com o do seu par quando houver sinal.':'Salvo neste aparelho.',' ',h('a',{style:'color:var(--acc);cursor:pointer',onclick:function(){S.editLim=true;render()}},'Mudar limite')));
 }
 /* Itens que já compraram (das notas lidas) viram sugestões para montar a lista do próximo mês com um toque */
+/* Corretor automático: compara cada palavra com um vocabulário de mercado (+ o que você já comprou) e troca só quando tem quase certeza */
+var VOCAB=('arroz feijão leite ovos pão café açúcar óleo macarrão carne moída frango banana tomate cebola batata alho queijo presunto manteiga iogurte papel higiênico sabão pó detergente amaciante sabonete shampoo condicionador pasta dente água sanitária ração fralda lenço umedecido azeite páprica defumada creme condensado molho extrato ketchup mostarda maionese percarbonato sódio tábua luminária varal mussarela pimentão filtro forma queijo requeijão ninho farinha láctea açaí ovomaltine achocolatado chocolate biscoito bolacha cereal aveia granola farinha trigo mandioca fubá sal pimenta orégano canela cravo louro vinagre limão laranja maçã mamão melão melancia abacaxi uva morango manga abacate pera kiwi cenoura beterraba abobrinha berinjela chuchu couve alface rúcula repolho brócolis couve-flor pepino milho ervilha lentilha grão-de-bico salsinha cebolinha coentro hortelã manjericão gengibre linguiça salsicha bacon bife picanha alcatra costela peixe tilápia salmão camarão atum sardinha presunto peito peru blanquet mortadela requeijão catupiry cream cheese iogurte gelatina pudim sorvete pizza lasanha nuggets hambúrguer empanado congelado refrigerante suco cerveja vinho energético isotônico chá guaraná coca cola esponja palha aço desinfetante multiuso limpador veja cif sapólio candida cloro lixo saco guardanapo toalha papel alumínio filme plástico marmita pilha lâmpada vela fósforo isqueiro escova dente fio dental enxaguante bucal desodorante absorvente algodão cotonete hastes protetor solar hidratante sabonete líquido espuma barbear lâmina gilete shampoo seco tintura esmalte acetona petisco areia gato cachorro vermífugo pomada assadura talco fralda lenços umedecidos mamadeira chupeta papinha fórmula banho cobertor lençol travesseiro cortina tapete cabide organizador pote tampa panela frigideira faca colher garfo copo prato tigela peneira ralador abridor lata massa tomate pelati passata sazon tempero caldo knorr maizena fermento royal bicarbonato corante essência leite-de-coco coco ralado passas amendoim castanha nozes pistache farofa tapioca cuscuz flocão paçoca bala chiclete pirulito goma wafer trident halls').split(' ');
+function semAc(t){return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function dist(a,b){var m=a.length,n=b.length,d=[],i,j;for(i=0;i<=m;i++){d[i]=[i]}for(j=1;j<=n;j++)d[0][j]=j;
+  for(i=1;i<=m;i++)for(j=1;j<=n;j++){var c=a.charAt(i-1)===b.charAt(j-1)?0:1;d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+c);
+    if(i>1&&j>1&&a.charAt(i-1)===b.charAt(j-2)&&a.charAt(i-2)===b.charAt(j-1))d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1)}return d[m][n]}
+function vocabMapa(){
+  var mp={};VOCAB.forEach(function(w){if(w.length>=3)mp[semAc(w)]=w});
+  (S.merc.catalogo||[]).forEach(function(x){x.n.split(' ').forEach(function(w){if(w.length>=4&&!mp[semAc(w)])mp[semAc(w)]=w.toLowerCase()})});
+  return mp;
+}
+function corrigeNome(nome){
+  var mp=vocabMapa(),keys=null,trocas=[];
+  var out=String(nome).split(/(\s+)/).map(function(w){
+    if(w.length<4||/\d/.test(w))return w;
+    var k=semAc(w).replace(/[^a-z-]/g,'');if(k.length<4)return w;
+    var alvo=null;
+    if(mp[k])alvo=mp[k];
+    else if(k.length>=5){keys=keys||Object.keys(mp);var lim=k.length>=8?2:1,best=9;
+      keys.forEach(function(v){if(Math.abs(v.length-k.length)>lim)return;var dd=dist(k,v);if(dd<best&&dd<=lim&&v.charAt(0)===k.charAt(0)){best=dd;alvo=mp[v]}})}
+    if(!alvo||alvo===w.toLowerCase())return w;
+    var novo=w.charAt(0)===w.charAt(0).toUpperCase()&&w.charAt(0)!==w.charAt(0).toLowerCase()?alvo.charAt(0).toUpperCase()+alvo.slice(1):alvo;
+    if(novo!==w)trocas.push(w+' → '+novo);return novo}).join('');
+  return {nome:out,trocas:trocas};
+}
 function nomeItem(n){n=String(n||'').replace(/\s+/g,' ').trim().toLowerCase();return n?n.charAt(0).toUpperCase()+n.slice(1):''}
 function guardaCatalogo(itens){
   var C=S.merc.catalogo=S.merc.catalogo||[],nomes=[];
@@ -2102,11 +2127,13 @@ function sugestoes(){
 var BASICOS=['Arroz','Feijão','Leite','Ovos','Pão','Café','Açúcar','Óleo','Macarrão','Carne moída','Frango','Banana','Tomate','Cebola','Batata','Alho','Queijo','Presunto','Manteiga','Iogurte','Papel higiênico','Sabão em pó','Detergente','Amaciante','Sabonete','Shampoo','Pasta de dente','Água sanitária','Ração da Selena','Fralda'];
 function cardLista(){
   if(!S.merc.lista)S.merc.lista=[];
+  var fixes=[];S.merc.lista.forEach(function(x){if(x.cx)return;x.cx=1;if(x.ok)return;var cr=corrigeNome(x.n);if(cr.trocas.length){x.n=cr.nome;fixes=fixes.concat(cr.trocas)}});
+  if(fixes.length){saveMerc();toast('Corrigi: '+fixes.join(', '))}
   var L=S.merc.lista,falta=L.filter(function(x){return !x.ok}),ok=L.filter(function(x){return x.ok});
   var card=h('div',{class:'card',style:'padding:4px 12px 8px'});
   card.append(h('h3',{style:'margin:8px 0'},'Lista de compras',h('small',{style:'margin-left:8px;color:var(--mut);font-weight:600'},L.length?(ok.length+' de '+L.length+' comprados'):'')));
-  var inp=h('input',{type:'text',placeholder:'Ex.: arroz, leite, sabão…',enterkeyhint:'done',autocapitalize:'sentences',style:'flex:1;min-width:0'});
-  var addNome=function(z){z=z.trim();if(!z)return;if(!L.some(function(y){return !y.ok&&y.n.toLowerCase()===z.toLowerCase()}))L.push({id:uid(),n:z.charAt(0).toUpperCase()+z.slice(1),ok:false})};
+  var inp=h('input',{type:'text',placeholder:'Ex.: arroz, leite, sabão…',enterkeyhint:'done',autocapitalize:'sentences',spellcheck:'true',autocorrect:'on',lang:'pt-BR',style:'flex:1;min-width:0'});
+  var addNome=function(z){z=z.trim();if(!z)return;var cr=corrigeNome(z);if(cr.trocas.length){z=cr.nome;toast('Corrigi: '+cr.trocas.join(', '))}if(!L.some(function(y){return !y.ok&&y.n.toLowerCase()===z.toLowerCase()}))L.push({id:uid(),n:z.charAt(0).toUpperCase()+z.slice(1),ok:false})};
   var add=function(){var t=inp.value.trim();if(!t)return;
     t.split(/[,;\n]+/).forEach(addNome);
     inp.value='';vib();saveMerc();render();setTimeout(function(){var i=document.querySelector('#view input[enterkeyhint]');if(i)i.focus()},50)};
