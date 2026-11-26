@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.5';
+const APP_VERSION = 'v2026.11.26.6';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -1396,7 +1396,7 @@ function verFotoNota(id){
 }
 function promptNota(){
   return 'A(s) imagem(ns) são foto de uma nota ou cupom fiscal brasileiro (NFC-e, SAT, mercado, farmácia, restaurante, loja, posto). Leia TODOS os itens. '+
-   'Responda somente com JSON: {"loja": string|null, "data": "AAAA-MM-DD"|null, "categoria": string, "itens": [{"nome": string, "qtd": number, "unit": number, "total": number}], "descontos": number, "total": number|null}. '+
+   'Responda somente com JSON: {"loja": string|null, "data": "AAAA-MM-DD"|null, "categoria": string, "itens": [{"nome": string, "qtd": number, "unit": number, "total": number, "grupo": "Despensa"|"Geladeira"|"Carnes"|"Hortifruti"|"Limpeza"|"Higiene"|"Casa"|"Selena"|"Agnes"|"Outros"}], "descontos": number, "total": number|null}. '+
    '"categoria" deve ser exatamente uma destas: '+JSON.stringify(S.config.cats)+'. Use números com ponto decimal. "qtd" pode ser fracionada (kg). "total" do item = valor final da linha. '+
    '"descontos" = soma dos descontos (0 se não houver). "total" = VALOR A PAGAR. "loja" = nome curto da loja (ex.: "Assaí", "Drogasil"). '+
    'Se a imagem não for uma nota legível, responda {"itens": [], "total": null}.';
@@ -2193,14 +2193,14 @@ function cardLista(){
 function lerNota(files){
   S.lendoNota=true;render();S.notaFotos=null;Promise.all(files.slice(0,3).map(fotoPequena)).then(function(f){S.notaFotos=f},function(){});
   var prompt='As imagens são foto(s) de um cupom fiscal (NFC-e/SAT) de supermercado brasileiro. Leia TODOS os itens comprados. '+
-   'Responda somente com JSON neste formato: {"loja": string|null, "data": "AAAA-MM-DD"|null, "itens": [{"nome": string, "qtd": number, "unit": number, "total": number}], "descontos": number, "total": number|null}. '+
+   'Responda somente com JSON neste formato: {"loja": string|null, "data": "AAAA-MM-DD"|null, "itens": [{"nome": string, "qtd": number, "unit": number, "total": number, "grupo": "Despensa"|"Geladeira"|"Carnes"|"Hortifruti"|"Limpeza"|"Higiene"|"Casa"|"Selena"|"Agnes"|"Outros"}], "descontos": number, "total": number|null}. '+
    'Use números com ponto decimal (ex.: 12.99). "total" do item = valor final da linha. "descontos" = soma dos descontos (0 se não houver). "total" = VALOR A PAGAR do cupom. '+
-   'Escreva os nomes como aparecem, só abreviando o mínimo. Se a imagem não for um cupom legível, responda {"itens": [], "total": null}.';
+   'Em "grupo" escolha onde o item se encaixa (Selena = ração e itens da cachorra; Agnes = itens de bebê). Escreva os nomes como aparecem, só abreviando o mínimo. Se a imagem não for um cupom legível, responda {"itens": [], "total": null}.';
   (FBMODE?geminiJSON(prompt,files.slice(0,4)):sampleApi.json(prompt,{images:files.slice(0,(sampleImg&&sampleImg.maxCount)||4)})).then(function(r){
-    var it=(r&&Array.isArray(r.itens)?r.itens:[]).map(function(x){var t=+x.total||((+x.unit||0)*(+x.qtd||1));return {nome:String(x.nome||'Item').slice(0,60),qtd:+x.qtd||1,unit:+x.unit||0,total:Math.round(t*100)/100}}).filter(function(x){return x.total>0});
+    var it=(r&&Array.isArray(r.itens)?r.itens:[]).map(function(x){var t=+x.total||((+x.unit||0)*(+x.qtd||1));return {nome:String(x.nome||'Item').slice(0,60),qtd:+x.qtd||1,unit:+x.unit||0,total:Math.round(t*100)/100,grupo:GRUPOS.indexOf(x.grupo)>=0?x.grupo:''}}).filter(function(x){return x.total>0});
     if(!it.length){toast('Não consegui ler itens nessa foto. Tente com mais luz e a nota esticada.');S.lendoNota=false;render();return}
     S.nota={loja:r.loja?String(r.loja).slice(0,60):'',data:typeof r.data==='string'?r.data.slice(0,10):'',itens:it,descontos:+r.descontos||0,total:+r.total||null};
-    try{guardaCatalogo(it)}catch(_){}
+    try{it.forEach(function(x){if(x.grupo&&x.grupo!=='Outros'&&grupoItem(x.nome)==='Outros')setGrupo(nomeItem(x.nome),x.grupo)});guardaCatalogo(it)}catch(_){}
     S.lendoNota=false;render();
   },function(e){S.lendoNota=false;var c=e&&e.code;try{console.warn('[nota] falhou:',c,e&&e.message||e)}catch(_){}toast(c==='app_check'?'O App Check do Firebase está bloqueando a leitura da nota.':c==='ai_off'?'Leitor de nota ainda não ativado no Firebase (AI Logic).':c==='not_granted'?'Leitura de foto não autorizada.':c==='rate_limited'?'Muitas leituras agora. Tente daqui a pouco.':c==='image_rejected'?'Foto não aceita. Tente outra.':'Não consegui ler a nota. Tente de novo.');render()});
 }
