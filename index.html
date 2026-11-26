@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.11';
+const APP_VERSION = 'v2026.11.26.12';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -2101,7 +2101,7 @@ function corrigeNome(nome){
     var k=semAc(w).replace(/[^a-z-]/g,'');if(k.length<4)return w;
     var alvo=null;
     if(mp[k])alvo=mp[k];
-    else if(k.length>=5){keys=keys||Object.keys(mp);var lim=k.length>=8?2:1,best=9;
+    else if(k.length>=5){keys=keys||Object.keys(mp);var lim=k.length>=7?2:1,best=9;
       keys.forEach(function(v){if(Math.abs(v.length-k.length)>lim)return;var dd=dist(k,v);if(dd<best&&dd<=lim&&v.charAt(0)===k.charAt(0)){best=dd;alvo=mp[v]}})}
     if(!alvo||alvo===w.toLowerCase())return w;
     var novo=w.charAt(0)===w.charAt(0).toUpperCase()&&w.charAt(0)!==w.charAt(0).toLowerCase()?alvo.charAt(0).toUpperCase()+alvo.slice(1):alvo;
@@ -2157,7 +2157,7 @@ function sugestoes(){
 var BASICOS=['Arroz','Feijão','Leite','Ovos','Pão','Café','Açúcar','Óleo','Macarrão','Carne moída','Frango','Banana','Tomate','Cebola','Batata','Alho','Queijo','Presunto','Manteiga','Iogurte','Papel higiênico','Sabão em pó','Detergente','Amaciante','Sabonete','Shampoo','Pasta de dente','Água sanitária','Ração da Selena','Fralda'];
 function cardLista(){
   if(!S.merc.lista)S.merc.lista=[];
-  var fixes=[];S.merc.lista.forEach(function(x){if(x.cx)return;x.cx=1;if(x.ok)return;var cr=corrigeNome(x.n);if(cr.trocas.length){x.n=cr.nome;fixes=fixes.concat(cr.trocas)}});
+  var fixes=[];S.merc.lista.forEach(function(x){if(x.cx>=2)return;x.cx=2;if(x.ok)return;var cr=corrigeNome(x.n);if(cr.trocas.length){x.n=cr.nome;fixes=fixes.concat(cr.trocas)}});
   if(fixes.length){saveMerc();toast('Corrigi: '+fixes.join(', '))}
   var L=S.merc.lista,falta=L.filter(function(x){return !x.ok}),ok=L.filter(function(x){return x.ok});
   var card=h('div',{class:'card',style:'padding:4px 12px 8px'});
