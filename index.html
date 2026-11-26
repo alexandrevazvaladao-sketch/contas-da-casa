@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.10';
+const APP_VERSION = 'v2026.11.26.11';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -2182,8 +2182,8 @@ function cardLista(){
   if(!L.length)card.append(h('div',{class:'hint',style:'margin:6px 0 4px'},'Escreva o que precisa comprar (pode separar por vírgula). No mercado, toque no item para marcar como comprado.'));
   if(falta.length){
     card.append(h('div',{class:'mut',style:'font-size:12px;font-weight:700;margin:6px 0 0;letter-spacing:.3px'},'FALTA COMPRAR · '+falta.length));
-    var visao=S.listaVisao||'loja';
-    card.append(h('div',{class:'seg',style:'margin:8px 0 2px'},[['loja','Por loja'],['grupo','Por grupo']].map(function(v){return h('button',{type:'button',class:visao===v[0]?'on':'',onclick:function(){S.listaVisao=v[0];render()}},v[1])})));
+    var visao=S.listaVisao||'grupo';
+    card.append(h('div',{class:'seg',style:'margin:8px 0 2px'},[['grupo','Por grupo'],['loja','Por loja']].map(function(v){return h('button',{type:'button',class:visao===v[0]?'on':'',onclick:function(){S.listaVisao=v[0];render()}},v[1])})));
     var porK={},chaves=visao==='loja'?LOJAS:GRUPOS,corK=visao==='loja'?LOJA_COR:GRP_COR;
     falta.forEach(function(x){var k=visao==='loja'?lojaItem(x.n):grupoItem(x.n);(porK[k]=porK[k]||[]).push(x)});
     var chip=function(txt,cor,on,fn){return h('button',{type:'button',style:'border:1px solid '+(on?cor:'var(--line)')+';background:var(--chip);color:'+cor+';border-radius:14px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer',onclick:fn},txt)};
