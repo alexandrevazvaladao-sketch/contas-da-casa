@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.1';
+const APP_VERSION = 'v2026.11.26.3';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -2072,7 +2072,7 @@ function vMercado(root){
   root.append(acts);
   // lista
   if(S.merc.itens.length){
-    var cl=h('div',{class:'card',style:'padding:4px 12px'},h('h3',{style:'margin:8px 0'},'Itens somados',h('a',{onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Apagar tudo?';return}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[]};S.nota=null;saveMerc();render()}},'limpar')));
+    var cl=h('div',{class:'card',style:'padding:4px 12px'},h('h3',{style:'margin:8px 0'},'Itens somados',h('a',{onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Apagar tudo?';return}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[],catalogo:S.merc.catalogo||[],ultima:S.merc.ultima||[]};S.nota=null;saveMerc();render()}},'limpar')));
     S.merc.itens.map(function(x,i){return [x,i]}).reverse().forEach(function(p){var x=p[0];
       cl.append(h('div',{class:'it'},h('span',{class:'n'},'#'+(p[1]+1)),h('div',{style:'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},x.n||((x.q||1)>1?(x.q+' × '+brlRaw(x.v)):'Item')),h('b',null,brlRaw(x.v*(x.q||1))),
         h('button',{class:'x','aria-label':'Remover',onclick:function(){S.merc.itens=S.merc.itens.filter(function(y){return y.id!==x.id});saveMerc();render()}},'✕')));
@@ -2082,17 +2082,46 @@ function vMercado(root){
   root.append(cardLista());
   root.append(h('div',{class:'hint',style:'text-align:center'},db?'A compra fica salva no celular e sincroniza com o do seu par quando houver sinal.':'Salvo neste aparelho.',' ',h('a',{style:'color:var(--acc);cursor:pointer',onclick:function(){S.editLim=true;render()}},'Mudar limite')));
 }
+/* Itens que já compraram (das notas lidas) viram sugestões para montar a lista do próximo mês com um toque */
+function nomeItem(n){n=String(n||'').replace(/\s+/g,' ').trim().toLowerCase();return n?n.charAt(0).toUpperCase()+n.slice(1):''}
+function guardaCatalogo(itens){
+  var C=S.merc.catalogo=S.merc.catalogo||[],nomes=[];
+  itens.forEach(function(x){var n=nomeItem(x.nome||x.n);if(!n||/^descontos?$/i.test(n)||n.length<2)return;nomes.push(n);
+    var f=C.filter(function(y){return y.n.toLowerCase()===n.toLowerCase()})[0];if(f){f.c=(f.c||1)+1;f.u=Date.now()}else C.push({n:n,c:1,u:Date.now()})});
+  if(C.length>400)S.merc.catalogo=C.sort(function(a,b){return (b.c-a.c)||(b.u-a.u)}).slice(0,400);
+  S.merc.ultima=nomes.slice(0,120);saveMerc();
+}
+function sugestoes(){
+  var m={};(S.merc.catalogo||[]).forEach(function(x){m[x.n.toLowerCase()]={n:x.n,c:x.c||1,u:x.u||0}});
+  Object.keys(S.months).forEach(function(k){monthLanc(k).forEach(function(l){if(l.orig==='mercado'&&Array.isArray(l.itens))l.itens.forEach(function(i){var n=nomeItem(i.n);if(!n||/^descontos?$/i.test(n))return;var f=m[n.toLowerCase()];if(!f)m[n.toLowerCase()]={n:n,c:1,u:0}})})});
+  var na={};(S.merc.lista||[]).forEach(function(x){if(!x.ok)na[x.n.toLowerCase()]=1});
+  // sem nota ainda: completa com itens comuns de mercado, para montar a lista só tocando
+  if(Object.keys(m).length<30)BASICOS.forEach(function(n){if(!m[n.toLowerCase()])m[n.toLowerCase()]={n:n,c:0,u:0}});
+  return Object.keys(m).filter(function(k){return !na[k]}).map(function(k){return m[k]}).sort(function(a,b){return (b.c-a.c)||(b.u-a.u)});
+}
+var BASICOS=['Arroz','Feijão','Leite','Ovos','Pão','Café','Açúcar','Óleo','Macarrão','Carne moída','Frango','Banana','Tomate','Cebola','Batata','Alho','Queijo','Presunto','Manteiga','Iogurte','Papel higiênico','Sabão em pó','Detergente','Amaciante','Sabonete','Shampoo','Pasta de dente','Água sanitária','Ração da Selena','Fralda'];
 function cardLista(){
   if(!S.merc.lista)S.merc.lista=[];
   var L=S.merc.lista,falta=L.filter(function(x){return !x.ok}),ok=L.filter(function(x){return x.ok});
   var card=h('div',{class:'card',style:'padding:4px 12px 8px'});
   card.append(h('h3',{style:'margin:8px 0'},'Lista de compras',h('small',{style:'margin-left:8px;color:var(--mut);font-weight:600'},L.length?(ok.length+' de '+L.length+' comprados'):'')));
   var inp=h('input',{type:'text',placeholder:'Ex.: arroz, leite, sabão…',enterkeyhint:'done',autocapitalize:'sentences',style:'flex:1;min-width:0'});
+  var addNome=function(z){z=z.trim();if(!z)return;if(!L.some(function(y){return !y.ok&&y.n.toLowerCase()===z.toLowerCase()}))L.push({id:uid(),n:z.charAt(0).toUpperCase()+z.slice(1),ok:false})};
   var add=function(){var t=inp.value.trim();if(!t)return;
-    t.split(/[,;\n]+/).map(function(z){return z.trim()}).filter(Boolean).forEach(function(z){if(!L.some(function(y){return !y.ok&&y.n.toLowerCase()===z.toLowerCase()}))L.push({id:uid(),n:z.charAt(0).toUpperCase()+z.slice(1),ok:false})});
+    t.split(/[,;\n]+/).forEach(addNome);
     inp.value='';vib();saveMerc();render();setTimeout(function(){var i=document.querySelector('#view input[enterkeyhint]');if(i)i.focus()},50)};
   inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();add()}});
   card.append(h('div',{style:'display:flex;gap:8px;margin:4px 0 6px'},inp,h('button',{class:'b',type:'button',style:'flex:0 0 auto',onclick:add},'Adicionar')));
+  // sugestões: itens de notas anteriores (toque para entrar na lista)
+  var sug=sugestoes(),chips=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px'});
+  var pinta=function(){chips.textContent='';var q=inp.value.trim().toLowerCase().split(/[,;]+/).pop().trim(),r=(q?sug.filter(function(x){return x.n.toLowerCase().indexOf(q)>=0}):sug).slice(0,q?8:10);
+    r.forEach(function(x){chips.append(h('button',{type:'button',class:'chip',style:'border:1px solid var(--line);background:var(--chip);color:var(--tx);border-radius:16px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer',onclick:function(){addNome(x.n);vib();saveMerc();render()}},'+ '+x.n))})};
+  inp.addEventListener('input',pinta);pinta();
+  if(sug.length){
+    var ult=(S.merc.ultima||[]).filter(function(n){return !L.some(function(y){return !y.ok&&y.n.toLowerCase()===n.toLowerCase()})});
+    if(ult.length)card.append(h('button',{class:'b sec full',type:'button',style:'margin:0 0 8px',onclick:function(){ult.forEach(addNome);vib();saveMerc();render()}},'↻ Trazer os '+ult.length+' itens da última nota'));
+    card.append(h('div',{class:'mut',style:'font-size:12px;font-weight:700;margin:0 0 6px;letter-spacing:.3px'},'SUGESTÕES · toque para adicionar'),chips);
+  }
   if(!L.length)card.append(h('div',{class:'hint',style:'margin:6px 0 4px'},'Escreva o que precisa comprar (pode separar por vírgula). No mercado, toque no item para marcar como comprado.'));
   if(falta.length){
     card.append(h('div',{class:'mut',style:'font-size:12px;font-weight:700;margin:6px 0 0;letter-spacing:.3px'},'FALTA COMPRAR · '+falta.length));
@@ -2120,6 +2149,7 @@ function lerNota(files){
     var it=(r&&Array.isArray(r.itens)?r.itens:[]).map(function(x){var t=+x.total||((+x.unit||0)*(+x.qtd||1));return {nome:String(x.nome||'Item').slice(0,60),qtd:+x.qtd||1,unit:+x.unit||0,total:Math.round(t*100)/100}}).filter(function(x){return x.total>0});
     if(!it.length){toast('Não consegui ler itens nessa foto. Tente com mais luz e a nota esticada.');S.lendoNota=false;render();return}
     S.nota={loja:r.loja?String(r.loja).slice(0,60):'',data:typeof r.data==='string'?r.data.slice(0,10):'',itens:it,descontos:+r.descontos||0,total:+r.total||null};
+    try{guardaCatalogo(it)}catch(_){}
     S.lendoNota=false;render();
   },function(e){S.lendoNota=false;var c=e&&e.code;try{console.warn('[nota] falhou:',c,e&&e.message||e)}catch(_){}toast(c==='app_check'?'O App Check do Firebase está bloqueando a leitura da nota.':c==='ai_off'?'Leitor de nota ainda não ativado no Firebase (AI Logic).':c==='not_granted'?'Leitura de foto não autorizada.':c==='rate_limited'?'Muitas leituras agora. Tente daqui a pouco.':c==='image_rejected'?'Foto não aceita. Tente outra.':'Não consegui ler a nota. Tente de novo.');render()});
 }
@@ -2157,7 +2187,7 @@ function finalizarMerc(){
       var data=dt.value||today(),ym=data.slice(0,7);
       var o={id:uid(),loja:S.merc.loja||'',nota:!!(S.notaFotos&&S.notaFotos.length),desc:d.value.trim()||'Mercado',valor:Math.round(tot*100)/100,tipo:'despesa',cat:st.cat,fonte:st.fonte,pessoa:st.pessoa,data:data,venc:'',pago:true,fixa:false,orig:'mercado',
         itens:S.merc.itens.map(function(x){return {n:x.n||'',v:x.v,q:x.q||1}})};
-      setMonth(ym,monthLanc(ym).concat([o]));if(o.nota){salvaFotoNota(o.id,S.notaFotos);S.notaFotos=null}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[]};saveMerc();closeSheet();vib();
+      setMonth(ym,monthLanc(ym).concat([o]));if(o.nota){salvaFotoNota(o.id,S.notaFotos);S.notaFotos=null}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[],catalogo:S.merc.catalogo||[],ultima:S.merc.ultima||[]};saveMerc();closeSheet();vib();
       toast('Compra de '+brlRaw(o.valor)+' lançada em '+st.cat+'.');render();
     }},'Lançar compra'))]);
 }
@@ -2330,7 +2360,7 @@ function startSubs(){
   var lim=setTimeout(function(){if(!S.loaded)toast('Demorando para conectar. Os dados podem estar desatualizados.')},10000);
   function done(){S.loaded=true;clearTimeout(lim);updateHeader();processaAuto()}
   subsOff.push(db.doc('casa/config').onSnapshot(function(s){if(s.exists){S.config=mergeCfg(s.data())}softRender()},function(){}));
-  subsOff.push(db.doc('mercado/atual').onSnapshot(function(s){if(!s.exists)return;var r=s.data();if((r.upd||0)>(S.merc.upd||0)){S.merc={itens:r.itens||[],limite:r.limite||0,upd:r.upd||0,loja:r.loja,dataNota:r.dataNota,lista:r.lista||[]};pref('merc',S.merc);softRender()}
+  subsOff.push(db.doc('mercado/atual').onSnapshot(function(s){if(!s.exists)return;var r=s.data();if((r.upd||0)>(S.merc.upd||0)){S.merc={itens:r.itens||[],limite:r.limite||0,upd:r.upd||0,loja:r.loja,dataNota:r.dataNota,lista:r.lista||[],catalogo:r.catalogo||[],ultima:r.ultima||[]};pref('merc',S.merc);softRender()}
     else if((S.merc.upd||0)>(r.upd||0)&&!s.metadata.hasPendingWrites)save('mercado/atual',S.merc)},function(){}));
   subsOff.push(db.collection('inbox').onSnapshot(function(q){if(!S.loaded)return;q.docs.forEach(function(d){var r=d.data()||{};if(lancarAuto({valor:r.valor,desc:r.desc,cartao:r.cartao,quando:r.quando,id:'i'+d.id}))try{db.doc('inbox/'+d.id).delete()}catch(e){}})},function(){}));
   subsOff.push(db.doc('casa/parcelas').onSnapshot(function(s){S.parcelas=s.exists?(s.data().itens||[]):[];softRender()},function(){}));
