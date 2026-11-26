@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.9';
+const APP_VERSION = 'v2026.11.26.10';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -2202,12 +2202,13 @@ function cardLista(){
           var salva=function(){var t=ni.value.trim();if(!t){return}var cr=corrigeNome(t);t=cr.nome;t=t.charAt(0).toUpperCase()+t.slice(1);
             var ov=function(m,k0,k1){if(m&&m[k0]){m[k1]=m[k0]}};x.n=t;x.cx=1;ov(S.merc.grupos,semAc(x.n),semAc(t));S.trocaId=null;saveMerc();vib();toast(cr.trocas.length?'Corrigi: '+cr.trocas.join(', '):'Nome corrigido.');render()};
           ni.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();salva()}});
-          card.append(h('div',{class:'mut',style:'font-size:11px;font-weight:700;padding:2px 4px 4px;letter-spacing:.3px'},'CORRIGIR NOME'));
+          card.append(h('div',{class:'mut',style:'font-size:11px;font-weight:700;padding:2px 4px 4px;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:center'},h('span',null,'CORRIGIR NOME'),h('button',{type:'button',style:'border:0;background:var(--chip);color:var(--tx);border-radius:12px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer',onclick:function(){S.trocaId=null;render()}},'Fechar ✕')));
           card.append(h('div',{style:'display:flex;gap:8px;padding:0 4px 10px'},ni,h('button',{class:'b',type:'button',style:'flex:0 0 auto',onclick:salva},'Salvar')));
           card.append(h('div',{class:'mut',style:'font-size:11px;font-weight:700;padding:2px 4px 4px;letter-spacing:.3px'},'ONDE COMPRAR'));
           card.append(h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;padding:0 4px 8px'},LOJAS.map(function(n){return chip(n,LOJA_COR[n],n===l,function(){S.trocaId=null;setLoja(x.n,n);vib();toast('“'+x.n+'” vai para: '+n+'. O app lembra.');render()})})));
           card.append(h('div',{class:'mut',style:'font-size:11px;font-weight:700;padding:2px 4px 4px;letter-spacing:.3px'},'GRUPO'));
           card.append(h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;padding:0 4px 10px'},GRUPOS.map(function(n){return chip(n,GRP_COR[n],n===g,function(){S.trocaId=null;setGrupo(x.n,n);vib();toast('“'+x.n+'” agora é '+n+'. O app lembra.');render()})})));
+          card.append(h('div',{style:'padding:0 4px 12px'},h('button',{class:'b sec full',type:'button',onclick:function(){S.trocaId=null;render()}},'Fechar sem mudar')));
         }})});
   }else if(L.length){card.append(h('div',{style:'text-align:center;padding:14px 0 6px;font-weight:700;color:var(--ok)'},'✓ Tudo comprado!'))}
   if(ok.length){
