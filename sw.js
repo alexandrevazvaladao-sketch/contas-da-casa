@@ -1,6 +1,6 @@
 // Service Worker do Contas da Casa: permite instalar o app e abrir sem internet.
 // Sempre tenta a versão mais nova; sem rede, usa a cópia guardada.
-const CACHE = 'contas-v81';
+const CACHE = 'contas-v82';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'inter.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

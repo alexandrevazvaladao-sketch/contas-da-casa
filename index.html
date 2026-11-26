@@ -249,7 +249,7 @@ details summary::-webkit-details-marker{display:none}
 (function(){
 "use strict";
 // Versão do app: muda este texto a cada publicação. O app compara com o arquivo publicado e se atualiza sozinho.
-const APP_VERSION = 'v2026.11.26.4';
+const APP_VERSION = 'v2026.11.26.5';
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var MES3=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
@@ -260,7 +260,7 @@ var DEF={
   fontes:['Nubank Casal','Nubank Isabella','Inter Alexandre','Banco do Brasil Isabella','Boleto/Pix'],
   cats:['Energia','Água','Supermercado','Carne','Internet','Financiamento','Seguro','Ração/Banho Selena','Gasolina','Remédio','IPTU','Contador','IA','Ipasgo','Celular','Ifood/Delivery','Restaurante/Lazer','Compras online','Casa','Saúde','Carro/Manutenção','Viagem','Agnes','Enxoval','Fatura cartão','Assinaturas','Transporte','Taxas','Investimento Viagem','Amortização','Reserva de emergência','Gastos extras','Parcelas','Salário','Outros'],
   divisao:'igual',metas:{},
-  regras:[['juliana step','Agnes'],['leonardo jos','Casa'],['artthur','Casa'],['agorasoumae','Enxoval'],['ifood club','Ifood/Delivery'],['estorno de ifood','Ifood/Delivery'],['ifood','Ifood/Delivery'],['99food','Ifood/Delivery'],['max supermercado','Supermercado'],['super vi','Supermercado'],['contaja','Contador'],['petz','Ração/Banho Selena'],['hinova','Seguro'],['anthropic','IA'],['the fiber','Internet'],['decolar','Viagem'],['shopee','Compras online'],['mercadol','Compras online'],['amazon','Compras online'],['olx','Compras online'],['iof','Taxas'],['desconto antecip','Taxas'],['otica','Saúde'],['medicina','Saúde'],['restaurante','Restaurante/Lazer'],['sorvet','Restaurante/Lazer'],['lanches','Restaurante/Lazer'],['autoglass','Carro/Manutenção'],['borracha','Carro/Manutenção'],['injecao','Carro/Manutenção'],['atacad','Supermercado'],['supermerc','Supermercado'],['mercado','Supermercado'],['açougue','Carne'],['acougue','Carne'],['ifood','Ifood/Delivery'],['rappi','Ifood/Delivery'],['posto ','Gasolina'],['shell','Gasolina'],['ipiranga','Gasolina'],['drogaria','Remédio'],['farmac','Remédio'],['droga','Remédio'],['netflix','Assinaturas'],['spotify','Assinaturas'],['disney','Assinaturas'],['amazon prime','Assinaturas'],['uber','Transporte'],['99 ','Transporte'],['pet','Ração/Banho Selena'],['enel','Energia/Água'],['equatorial','Energia/Água'],['saneago','Energia/Água'],['claro','Celular'],['vivo','Celular'],['tim ','Celular']]
+  regras:[['juliana step','Agnes'],['leonardo jos','Casa'],['artthur','Casa'],['agorasoumae','Enxoval'],['ifood club','Ifood/Delivery'],['estorno de ifood','Ifood/Delivery'],['ifood','Ifood/Delivery'],['99food','Ifood/Delivery'],['max supermercado','Supermercado'],['super vi','Supermercado'],['contaja','Contador'],['petz','Ração/Banho Selena'],['hinova','Seguro'],['anthropic','IA'],['the fiber','Internet'],['decolar','Viagem'],['shopee','Compras online'],['feira','Supermercado'],['hortifruti','Supermercado'],['sacolao','Supermercado'],['sacolão','Supermercado'],['padaria','Supermercado'],['mercadol','Compras online'],['amazon','Compras online'],['olx','Compras online'],['iof','Taxas'],['desconto antecip','Taxas'],['otica','Saúde'],['medicina','Saúde'],['restaurante','Restaurante/Lazer'],['sorvet','Restaurante/Lazer'],['lanches','Restaurante/Lazer'],['autoglass','Carro/Manutenção'],['borracha','Carro/Manutenção'],['injecao','Carro/Manutenção'],['atacad','Supermercado'],['supermerc','Supermercado'],['mercado','Supermercado'],['açougue','Carne'],['acougue','Carne'],['ifood','Ifood/Delivery'],['rappi','Ifood/Delivery'],['posto ','Gasolina'],['shell','Gasolina'],['ipiranga','Gasolina'],['drogaria','Remédio'],['farmac','Remédio'],['droga','Remédio'],['netflix','Assinaturas'],['spotify','Assinaturas'],['disney','Assinaturas'],['amazon prime','Assinaturas'],['uber','Transporte'],['99 ','Transporte'],['pet','Ração/Banho Selena'],['enel','Energia/Água'],['equatorial','Energia/Água'],['saneago','Energia/Água'],['claro','Celular'],['vivo','Celular'],['tim ','Celular']]
 };
 var INICIO='2026-12',METAS_DESDE='2027-01';
 function metasDo(ym){return ym>=METAS_DESDE?(S.config.metas||{}):{}}
@@ -2072,7 +2072,7 @@ function vMercado(root){
   root.append(acts);
   // lista
   if(S.merc.itens.length){
-    var cl=h('div',{class:'card',style:'padding:4px 12px'},h('h3',{style:'margin:8px 0'},'Itens somados',h('a',{onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Apagar tudo?';return}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[],catalogo:S.merc.catalogo||[],ultima:S.merc.ultima||[]};S.nota=null;saveMerc();render()}},'limpar')));
+    var cl=h('div',{class:'card',style:'padding:4px 12px'},h('h3',{style:'margin:8px 0'},'Itens somados',h('a',{onclick:function(e){if(!e.target._c){e.target._c=1;e.target.textContent='Apagar tudo?';return}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[],catalogo:S.merc.catalogo||[],ultima:S.merc.ultima||[],grupos:S.merc.grupos||{}};S.nota=null;saveMerc();render()}},'limpar')));
     S.merc.itens.map(function(x,i){return [x,i]}).reverse().forEach(function(p){var x=p[0];
       cl.append(h('div',{class:'it'},h('span',{class:'n'},'#'+(p[1]+1)),h('div',{style:'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},x.n||((x.q||1)>1?(x.q+' × '+brlRaw(x.v)):'Item')),h('b',null,brlRaw(x.v*(x.q||1))),
         h('button',{class:'x','aria-label':'Remover',onclick:function(){S.merc.itens=S.merc.itens.filter(function(y){return y.id!==x.id});saveMerc();render()}},'✕')));
@@ -2108,6 +2108,25 @@ function corrigeNome(nome){
     if(novo!==w)trocas.push(w+' → '+novo);return novo}).join('');
   return {nome:out,trocas:trocas};
 }
+/* Grupos de item: o app aprende o que é cada coisa (regras + o que você corrigir) */
+var GRUPOS=['Despensa','Geladeira','Carnes','Hortifruti','Limpeza','Higiene','Casa','Selena','Agnes','Outros'];
+var GRP_COR={Despensa:'#e0a96d',Geladeira:'#6cb6ff',Carnes:'#ff7b7b',Hortifruti:'#7be3b0',Limpeza:'#9fb4ff',Higiene:'#d6a2ff',Casa:'#ffd27a',Selena:'#ffa07a',Agnes:'#ff9fd0',Outros:'#a1a1aa'};
+var GRP_REGRAS=[
+ ['Selena',/racao|selena|areia|petisco|vermifugo|antipulga|coleira/],
+ ['Agnes',/fralda|lenco umedecido|lencos umedecidos|assadura|mamadeira|chupeta|papinha|formula infantil|enxoval|bebe/],
+ ['Despensa',/molho|extrato de tomate|creme de leite|leite condensado|leite ninho|leite em po|farinha lactea|ovomaltine|achocolatado|filtro de papel|pao de forma|toast|ketchup|mostarda|maionese|caldo|tempero|paprica|sazon|fermento|maizena|bicarbonato/],
+ ['Limpeza',/veja|cif\b|detergente|sabao|amaciante|agua sanitaria|esponja|saco de lixo|desinfetante|percarbonato|vanish|multiuso|alvejante|cloro|lustra|limpa|palha de aco|lysoform|pinho/],
+ ['Higiene',/papel higienico|sabonete|shampoo|condicionador|pasta de dente|creme dental|escova de dente|desodorante|absorvente|algodao|cotonete|fio dental|enxaguante|hidratante|protetor solar|barbear|lamina|gilete|acetona|esmalte/],
+ ['Casa',/papel toalha|guardanapo|pilha|lampada|luminaria|varal|tabua|panela|pote|organizador|cabide|vela|cortina|tapete|toalha|lencol|travesseiro|frigideira|faca|colher|garfo|copo|prato|tigela|marmita|papel aluminio|filme plastico|isqueiro|fosforo/],
+ ['Carnes',/carne|frango|bife|linguica|salsicha|peixe|tilapia|salmao|camarao|bacon|picanha|alcatra|costela|hamburguer|nuggets|file|coxa|peito de|acem|patinho|fraldinha|moida|mortadela|peru/],
+ ['Hortifruti',/tomate|cebola|batata|alho|pimentao|banana|cenoura|limao|laranja|maca\b|mamao|melao|melancia|abacaxi|uva|morango|manga|abacate|alface|rucula|repolho|brocolis|couve|pepino|abobrinha|berinjela|chuchu|beterraba|salsinha|cebolinha|coentro|hortela|gengibre|fruta|verdura|legume|milho verde/],
+ ['Geladeira',/leite|ovos?\b|manteiga|margarina|queijo|mussarela|presunto|iogurte|requeijao|suco|refrigerante|cerveja|vinho|agua|acai|sorvete|gelatina|pudim|cream cheese|catupiry|salame|peito de peru|nata|danone|yakult/],
+ ['Despensa',/arroz|feijao|cafe|acucar|oleo|azeite|macarrao|farinha|aveia|biscoito|bolacha|cereal|sal\b|lentilha|milho|ervilha|atum|sardinha|granola|mel\b|geleia|chocolate|bala|chiclete|pao|massa|fuba|tapioca|cuscuz|amendoim|castanha|passas|vinagre|pimenta|oregano|canela|cha\b|biscoito|wafer|farofa|goiabada|cocada|pacoca/]
+];
+function grupoItem(nome){
+  var k=semAc(nome).trim(),ov=(S.merc.grupos||{})[k];if(ov&&GRUPOS.indexOf(ov)>=0)return ov;
+  for(var i=0;i<GRP_REGRAS.length;i++){if(GRP_REGRAS[i][1].test(k))return GRP_REGRAS[i][0]}return 'Outros'}
+function setGrupo(nome,g){S.merc.grupos=S.merc.grupos||{};S.merc.grupos[semAc(nome).trim()]=g;saveMerc()}
 function nomeItem(n){n=String(n||'').replace(/\s+/g,' ').trim().toLowerCase();return n?n.charAt(0).toUpperCase()+n.slice(1):''}
 function guardaCatalogo(itens){
   var C=S.merc.catalogo=S.merc.catalogo||[],nomes=[];
@@ -2152,12 +2171,17 @@ function cardLista(){
   if(!L.length)card.append(h('div',{class:'hint',style:'margin:6px 0 4px'},'Escreva o que precisa comprar (pode separar por vírgula). No mercado, toque no item para marcar como comprado.'));
   if(falta.length){
     card.append(h('div',{class:'mut',style:'font-size:12px;font-weight:700;margin:6px 0 0;letter-spacing:.3px'},'FALTA COMPRAR · '+falta.length));
-    falta.forEach(function(x){
-      var el=h('div',{class:'lc',role:'button',tabindex:'0'},h('span',{class:'bx'}),h('span',{class:'tx'},x.n),
-        h('button',{class:'rm','aria-label':'Remover da lista',onclick:function(e){e.stopPropagation();S.merc.lista=S.merc.lista.filter(function(y){return y.id!==x.id});saveMerc();render()}},'✕'));
-      el.onclick=function(){if(el._d)return;el._d=1;vib();el.classList.add('vai');el.firstChild.textContent='✓';
-        setTimeout(function(){x.ok=true;x.em=Date.now();saveMerc();render()},320)};
-      card.append(el)});
+    var porG={};falta.forEach(function(x){var g=grupoItem(x.n);(porG[g]=porG[g]||[]).push(x)});
+    GRUPOS.filter(function(g){return porG[g]}).forEach(function(g){
+      card.append(h('div',{style:'display:flex;align-items:center;gap:8px;margin:12px 0 2px;font-size:13px;font-weight:700;color:'+GRP_COR[g]},h('i',{style:'width:9px;height:9px;border-radius:50%;background:'+GRP_COR[g]}),g,h('small',{style:'color:var(--mut);font-weight:600'},porG[g].length)));
+      porG[g].forEach(function(x){
+        var tag=h('button',{class:'rm',type:'button','aria-label':'Mudar grupo',style:'font-size:12px;font-weight:700;color:'+GRP_COR[g]+';border:1px solid var(--line);border-radius:10px;padding:4px 8px',onclick:function(e){e.stopPropagation();S.trocaId=S.trocaId===x.id?null:x.id;render()}},'trocar');
+        var el=h('div',{class:'lc',role:'button',tabindex:'0'},h('span',{class:'bx'}),h('span',{class:'tx'},x.n),tag,
+          h('button',{class:'rm','aria-label':'Remover da lista',onclick:function(e){e.stopPropagation();S.merc.lista=S.merc.lista.filter(function(y){return y.id!==x.id});saveMerc();render()}},'✕'));
+        el.onclick=function(){if(el._d)return;el._d=1;vib();el.classList.add('vai');el.firstChild.textContent='✓';
+          setTimeout(function(){x.ok=true;x.em=Date.now();saveMerc();render()},320)};
+        card.append(el);
+        if(S.trocaId===x.id)card.append(h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;padding:4px 4px 10px'},GRUPOS.map(function(n){return h('button',{type:'button',style:'border:1px solid '+(n===g?GRP_COR[n]:'var(--line)')+';background:var(--chip);color:'+GRP_COR[n]+';border-radius:14px;padding:6px 11px;font-size:13px;font-weight:700;cursor:pointer',onclick:function(){S.trocaId=null;setGrupo(x.n,n);vib();toast('“'+x.n+'” agora é '+n+'. O app lembra.');render()}},n)})))})});
   }else if(L.length){card.append(h('div',{style:'text-align:center;padding:14px 0 6px;font-weight:700;color:var(--ok)'},'✓ Tudo comprado!'))}
   if(ok.length){
     card.append(h('div',{class:'mut',style:'font-size:12px;font-weight:700;margin:12px 0 0;letter-spacing:.3px;display:flex;justify-content:space-between'},h('span',null,'COMPRADOS · '+ok.length),
@@ -2187,6 +2211,8 @@ function cardNota(tot){
     h('div',{class:'row',style:'min-height:0'},h('div',{class:'grow'},'Total da nota'),h('div',{class:'v'},brlRaw(pagar))),
     tot?h('div',{class:'row',style:'min-height:0'},h('div',{class:'grow'},'Você somou'),h('div',{class:'v'},brlRaw(tot))):null,
     tot?h('div',{class:'row',style:'min-height:0'},h('div',{class:'grow'},'Diferença'),h('div',{class:'v '+(Math.abs(dif)<0.01?'pos':'neg')},Math.abs(dif)<0.01?'bateu ✓':(dif>0?'+':'')+brlRaw(dif))):null);
+  var tg={};nt.itens.forEach(function(x){var g=grupoItem(x.nome);tg[g]=(tg[g]||0)+x.total});
+  c.append(h('div',{style:'display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px'},GRUPOS.filter(function(g){return tg[g]}).sort(function(a,b){return tg[b]-tg[a]}).map(function(g){return h('span',{style:'font-size:12px;font-weight:700;border-radius:12px;padding:4px 10px;background:var(--chip);color:'+GRP_COR[g]},g+' '+brlRaw(tg[g]))})));
   var lst=h('details',null,h('summary',null,nt.itens.length+' itens na nota ▾'));
   nt.itens.forEach(function(x){lst.append(h('div',{class:'it'},h('div',{style:'flex:1;min-width:0'},h('div',{style:'overflow:hidden;text-overflow:ellipsis;white-space:nowrap'},x.nome),h('div',{class:'mut',style:'font-size:12px'},x.qtd!==1?x.qtd+' × '+brlRaw(x.unit):'')),h('b',null,brlRaw(x.total))))});
   if(nt.descontos)lst.append(h('div',{class:'it'},h('div',{style:'flex:1'},'Descontos'),h('b',{class:'pos'},'−'+brlRaw(nt.descontos))));
@@ -2213,8 +2239,8 @@ function finalizarMerc(){
     h('div',{class:'foot'},h('button',{class:'b',onclick:function(){
       var data=dt.value||today(),ym=data.slice(0,7);
       var o={id:uid(),loja:S.merc.loja||'',nota:!!(S.notaFotos&&S.notaFotos.length),desc:d.value.trim()||'Mercado',valor:Math.round(tot*100)/100,tipo:'despesa',cat:st.cat,fonte:st.fonte,pessoa:st.pessoa,data:data,venc:'',pago:true,fixa:false,orig:'mercado',
-        itens:S.merc.itens.map(function(x){return {n:x.n||'',v:x.v,q:x.q||1}})};
-      setMonth(ym,monthLanc(ym).concat([o]));if(o.nota){salvaFotoNota(o.id,S.notaFotos);S.notaFotos=null}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[],catalogo:S.merc.catalogo||[],ultima:S.merc.ultima||[]};saveMerc();closeSheet();vib();
+        itens:S.merc.itens.map(function(x){var o={n:x.n||'',v:x.v,q:x.q||1};if(x.n)o.g=grupoItem(x.n);return o})};
+      setMonth(ym,monthLanc(ym).concat([o]));if(o.nota){salvaFotoNota(o.id,S.notaFotos);S.notaFotos=null}S.merc={itens:[],limite:S.merc.limite,upd:0,lista:S.merc.lista||[],catalogo:S.merc.catalogo||[],ultima:S.merc.ultima||[],grupos:S.merc.grupos||{}};saveMerc();closeSheet();vib();
       toast('Compra de '+brlRaw(o.valor)+' lançada em '+st.cat+'.');render();
     }},'Lançar compra'))]);
 }
@@ -2387,7 +2413,7 @@ function startSubs(){
   var lim=setTimeout(function(){if(!S.loaded)toast('Demorando para conectar. Os dados podem estar desatualizados.')},10000);
   function done(){S.loaded=true;clearTimeout(lim);updateHeader();processaAuto()}
   subsOff.push(db.doc('casa/config').onSnapshot(function(s){if(s.exists){S.config=mergeCfg(s.data())}softRender()},function(){}));
-  subsOff.push(db.doc('mercado/atual').onSnapshot(function(s){if(!s.exists)return;var r=s.data();if((r.upd||0)>(S.merc.upd||0)){S.merc={itens:r.itens||[],limite:r.limite||0,upd:r.upd||0,loja:r.loja,dataNota:r.dataNota,lista:r.lista||[],catalogo:r.catalogo||[],ultima:r.ultima||[]};pref('merc',S.merc);softRender()}
+  subsOff.push(db.doc('mercado/atual').onSnapshot(function(s){if(!s.exists)return;var r=s.data();if((r.upd||0)>(S.merc.upd||0)){S.merc={itens:r.itens||[],limite:r.limite||0,upd:r.upd||0,loja:r.loja,dataNota:r.dataNota,lista:r.lista||[],catalogo:r.catalogo||[],ultima:r.ultima||[],grupos:r.grupos||{}};pref('merc',S.merc);softRender()}
     else if((S.merc.upd||0)>(r.upd||0)&&!s.metadata.hasPendingWrites)save('mercado/atual',S.merc)},function(){}));
   subsOff.push(db.collection('inbox').onSnapshot(function(q){if(!S.loaded)return;q.docs.forEach(function(d){var r=d.data()||{};if(lancarAuto({valor:r.valor,desc:r.desc,cartao:r.cartao,quando:r.quando,id:'i'+d.id}))try{db.doc('inbox/'+d.id).delete()}catch(e){}})},function(){}));
   subsOff.push(db.doc('casa/parcelas').onSnapshot(function(s){S.parcelas=s.exists?(s.data().itens||[]):[];softRender()},function(){}));
